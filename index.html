@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Café That Remembers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            overflow: hidden;
+            background: #1a1410;
+        }
+
+        .scene {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scene.active {
+            opacity: 1;
+            z-index: 1;
+        }
+
+        .text-overlay {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 248, 240, 0.9);
+            font-size: 1.8rem;
+            text-align: center;
+            padding: 20px;
+            max-width: 80%;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            animation: fadeInText 2s ease;
+        }
+
+        @keyframes fadeInText {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .choices {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 30px;
+            z-index: 10;
+        }
+
+        .choice-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .choice-btn svg {
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes steamRise {
+            0% {
+                opacity: 0.7;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1.5);
+            }
+        }
+
+        .steam-particle {
+            position: absolute;
+            animation: steamRise 3s infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        .light-particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 220, 150, 0.8);
+            border-radius: 50%;
+            animation: sparkle 2s infinite;
+        }
+
+        @keyframes chalkWrite {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .chalk-text {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: chalkWrite 3s ease forwards;
+        }
+
+        .fade-out {
+            animation: fadeOut 2s ease forwards;
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Scene 1: Entering the café -->
+    <div class="scene active" id="scene1">
+        <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <!-- Warm background gradient -->
+            <defs>
+                <radialGradient id="warmGlow" cx="50%" cy="40%">
+                    <stop offset="0%" style="stop-color:#f4e4c1;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#3d2817;stop-opacity:1" />
+                </radialGradient>
+                <filter id="softGlow">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- Background -->
+            <rect width="1920" height="1080" fill="url(#warmGlow)"/>
+
+            <!-- Café window with view -->
+            <rect x="100" y="80" width="600" height="400" fill="#2a1f1a" opacity="0.6"/>
+            <rect x="110" y="90" width="580" height="380" fill="#4a3f3a" opacity="0.3"/>
+
+            <!-- Warm lights -->
+            <circle cx="300" cy="150" r="40" fill="#ffdb8a" opacity="0.4" filter="url(#softGlow)"/>
+            <circle cx="500" cy="200" r="35" fill="#ffdb8a" opacity="0.3" filter="url(#softGlow)"/>
+            <circle cx="1500" cy="180" r="50" fill="#ffdb8a" opacity="0.4" filter="url(#softGlow)"/>
+
+            <!-- Table in foreground (POV) -->
+            <ellipse cx="960" cy="900" rx="800" ry="150" fill="#5a4839" opacity="0.9"/>
+            <ellipse cx="960" cy="890" rx="780" ry="140" fill="#6b5747"/>
+
+            <!-- Coffee cup on table -->
+            <g id="coffeeCup" style="animation: float 3s ease-in-out infinite">
+                <!-- Saucer -->
+                <ellipse cx="960" cy="750" rx="120" ry="30" fill="#d4c4b0"/>
+                <ellipse cx="960" cy="745" rx="110" ry="25" fill="#e8dcc8"/>
+
+                <!-- Cup -->
+                <path d="M 860 750 Q 850 650 870 600 L 1050 600 Q 1070 650 1060 750 Z"
+                      fill="#f5f0e8" stroke="#d4c4b0" stroke-width="3"/>
+
+                <!-- Coffee inside -->
+                <ellipse cx="960" cy="620" rx="85" ry="25" fill="#4a2f1f"/>
+
+                <!-- Handle -->
+                <path d="M 1050 650 Q 1120 650 1120 700 Q 1120 730 1060 730"
+                      fill="none" stroke="#d4c4b0" stroke-width="15" opacity="0.9"/>
+
+                <!-- Steam particles -->
+                <g id="steam">
+                    <path class="steam-particle" d="M 940 590 Q 935 560 940 530"
+                          stroke="#ffffff" stroke-width="3" fill="none" opacity="0.5"
+                          style="animation-delay: 0s"/>
+                    <path class="steam-particle" d="M 960 580 Q 965 550 960 520"
+                          stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.4"
+                          style="animation-delay: 0.5s"/>
+                    <path class="steam-particle" d="M 980 590 Q 985 560 980 530"
+                          stroke="#ffffff" stroke-width="3" fill="none" opacity="0.5"
+                          style="animation-delay: 1s"/>
+                </g>
+            </g>
+
+            <!-- Chalkboard menu in background -->
+            <rect x="1200" y="200" width="500" height="400" fill="#2d2420" rx="10"/>
+            <rect x="1215" y="215" width="470" height="370" fill="#1a1614" rx="5"/>
+
+            <!-- Chalk text on board -->
+            <text x="1450" y="280" font-size="45" fill="#e8dcc8" text-anchor="middle" font-family="'Brush Script MT', cursive">
+                Welcome Back
+            </text>
+            <text x="1450" y="340" font-size="38" fill="#d4c4b0" text-anchor="middle" font-family="Georgia, serif">
+                Kayley
+            </text>
+            <line x1="1250" y1="370" x2="1650" y2="370" stroke="#c4b4a0" stroke-width="2"/>
+            <text x="1450" y="430" font-size="32" fill="#c4a490" text-anchor="middle" font-family="Georgia, serif">
+                Today's Special:
+            </text>
+            <text x="1450" y="480" font-size="36" fill="#d4c4b0" text-anchor="middle" font-family="'Brush Script MT', cursive">
+                The Drink You Need
+            </text>
+
+            <!-- Ambient light particles -->
+            <circle class="light-particle" cx="400" cy="300" r="2" style="animation-delay: 0s"/>
+            <circle class="light-particle" cx="600" cy="450" r="2" style="animation-delay: 0.7s"/>
+            <circle class="light-particle" cx="1300" cy="350" r="2" style="animation-delay: 1.3s"/>
+            <circle class="light-particle" cx="800" cy="200" r="2" style="animation-delay: 1.8s"/>
+            <circle class="light-particle" cx="1600" cy="500" r="2" style="animation-delay: 2.3s"/>
+        </svg>
+    </div>
+
+    <!-- Scene 2: Choice moment -->
+    <div class="scene" id="scene2">
+        <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <!-- Same warm background -->
+            <rect width="1920" height="1080" fill="url(#warmGlow)"/>
+
+            <!-- Closer view of table -->
+            <ellipse cx="960" cy="850" rx="900" ry="200" fill="#5a4839" opacity="0.9"/>
+            <ellipse cx="960" cy="840" rx="880" ry="190" fill="#6b5747"/>
+
+            <!-- Three items representing choices -->
+            <!-- Left: Notepad (Ask how they know your name) -->
+            <g id="notepad" transform="translate(400, 400)">
+                <rect width="200" height="280" fill="#f9f5ec" rx="5"/>
+                <rect x="10" y="10" width="180" height="260" fill="#ffffff" rx="3"/>
+                <line x1="30" y1="50" x2="170" y2="50" stroke="#d4c4b0" stroke-width="2"/>
+                <line x1="30" y1="80" x2="170" y2="80" stroke="#d4c4b0" stroke-width="2"/>
+                <line x1="30" y1="110" x2="170" y2="110" stroke="#d4c4b0" stroke-width="2"/>
+                <text x="100" y="180" font-size="28" fill="#8b7355" text-anchor="middle">?</text>
+            </g>
+
+            <!-- Center: Coffee cup (Order "the usual") -->
+            <g id="centerCup" transform="translate(0, 100)">
+                <ellipse cx="960" cy="550" rx="100" ry="25" fill="#d4c4b0"/>
+                <path d="M 870 550 Q 860 470 880 430 L 1040 430 Q 1060 470 1050 550 Z"
+                      fill="#f5f0e8" stroke="#d4c4b0" stroke-width="3"/>
+                <ellipse cx="960" cy="450" rx="75" ry="20" fill="#6b4423"/>
+                <path d="M 1040 490 Q 1100 490 1100 530 Q 1100 555 1050 555"
+                      fill="none" stroke="#d4c4b0" stroke-width="12"/>
+            </g>
+
+            <!-- Right: Empty cup (Dump the drink out) -->
+            <g id="emptyCup" transform="translate(1150, 400)">
+                <ellipse cx="170" cy="320" rx="90" ry="22" fill="#c4b4a0"/>
+                <path d="M 90 320 Q 80 250 100 210 L 240 210 Q 260 250 250 320 Z"
+                      fill="#e5ddd0" stroke="#c4b4a0" stroke-width="3"/>
+                <ellipse cx="170" cy="230" rx="65" ry="18" fill="none" stroke="#d4c4b0" stroke-width="2"/>
+            </g>
+        </svg>
+
+        <div class="choices">
+            <button class="choice-btn" onclick="chooseHealing()">
+                <svg width="150" height="150" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="90" fill="rgba(107, 68, 35, 0.3)" stroke="#d4c4b0" stroke-width="3"/>
+                    <text x="100" y="115" font-size="60" fill="#f5f0e8" text-anchor="middle">?</text>
+                </svg>
+            </button>
+            <button class="choice-btn" onclick="chooseUsual()">
+                <svg width="150" height="150" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="90" fill="rgba(107, 68, 35, 0.3)" stroke="#d4c4b0" stroke-width="3"/>
+                    <ellipse cx="100" cy="100" rx="40" ry="50" fill="#6b4423"/>
+                    <path d="M 70 80 Q 68 70 72 65 Q 100 50 128 65 Q 132 70 130 80 Z"
+                          fill="rgba(255, 255, 255, 0.6)"/>
+                </svg>
+            </button>
+            <button class="choice-btn" onclick="chooseDump()">
+                <svg width="150" height="150" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="90" fill="rgba(107, 68, 35, 0.3)" stroke="#d4c4b0" stroke-width="3"/>
+                    <path d="M 100 120 L 80 160" stroke="#4a9fd4" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M 100 115 L 100 170" stroke="#4a9fd4" stroke-width="5" stroke-linecap="round"/>
+                    <path d="M 100 120 L 120 165" stroke="#4a9fd4" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Ending A: Healing -->
+    <div class="scene" id="endingA">
+        <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <rect width="1920" height="1080" fill="#f4e4c1"/>
+
+            <!-- Warm golden glow -->
+            <circle cx="960" cy="400" r="400" fill="#ffd89a" opacity="0.3" filter="url(#softGlow)"/>
+
+            <!-- Memory fragments floating -->
+            <g opacity="0.6">
+                <image href="cafe.png" x="200" y="100" width="300" height="200" opacity="0.4"
+                       style="animation: float 4s ease-in-out infinite"/>
+                <rect x="700" y="150" width="400" height="250" fill="#ffffff" opacity="0.5" rx="10"
+                      style="animation: float 5s ease-in-out infinite; animation-delay: 0.5s"/>
+                <rect x="1300" y="200" width="350" height="230" fill="#ffffff" opacity="0.5" rx="10"
+                      style="animation: float 4.5s ease-in-out infinite; animation-delay: 1s"/>
+            </g>
+
+            <!-- Steaming cup in hands POV -->
+            <g transform="translate(960, 700)">
+                <!-- Hands holding cup -->
+                <ellipse cx="-120" cy="0" rx="80" ry="100" fill="#d4a574" opacity="0.8"/>
+                <ellipse cx="120" cy="0" rx="80" ry="100" fill="#d4a574" opacity="0.8"/>
+
+                <!-- Beautiful ornate cup -->
+                <ellipse cx="0" cy="20" rx="130" ry="35" fill="#d4c4b0"/>
+                <path d="M -110 20 Q -120 -50 -100 -90 L 100 -90 Q 120 -50 110 20 Z"
+                      fill="#f5ede0" stroke="#c4a490" stroke-width="3"/>
+
+                <!-- Golden coffee with sparkles -->
+                <ellipse cx="0" cy="-70" rx="90" ry="28" fill="#b87a3d"/>
+                <ellipse cx="0" cy="-72" rx="85" ry="25" fill="#d4a65f"/>
+
+                <!-- Magical steam with golden particles -->
+                <g>
+                    <circle cx="-30" cy="-110" r="8" fill="#ffd89a" opacity="0.7"
+                            style="animation: sparkle 1.5s infinite"/>
+                    <circle cx="10" cy="-130" r="6" fill="#ffd89a" opacity="0.7"
+                            style="animation: sparkle 1.5s infinite; animation-delay: 0.5s"/>
+                    <circle cx="35" cy="-115" r="7" fill="#ffd89a" opacity="0.7"
+                            style="animation: sparkle 1.5s infinite; animation-delay: 1s"/>
+                </g>
+            </g>
+
+            <!-- Heart shapes floating up -->
+            <g fill="#f4b4c4" opacity="0.5">
+                <path d="M 400 800 Q 400 780 415 780 Q 430 780 430 800 Q 430 820 415 835 L 400 850 L 385 835 Q 370 820 370 800 Q 370 780 385 780 Q 400 780 400 800"
+                      style="animation: float 6s ease-in-out infinite"/>
+                <path d="M 1500 850 Q 1500 830 1515 830 Q 1530 830 1530 850 Q 1530 870 1515 885 L 1500 900 L 1485 885 Q 1470 870 1470 850 Q 1470 830 1485 830 Q 1500 830 1500 850"
+                      style="animation: float 7s ease-in-out infinite; animation-delay: 1s"
+                      transform="scale(1.2)"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Ending B: Fresh Start -->
+    <div class="scene" id="endingB">
+        <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <!-- Clean, bright background -->
+            <rect width="1920" height="1080" fill="#faf8f3"/>
+
+            <!-- Soft light from above -->
+            <ellipse cx="960" cy="0" rx="800" ry="400" fill="#fff9e6" opacity="0.7"/>
+
+            <!-- Table -->
+            <ellipse cx="960" cy="900" rx="850" ry="180" fill="#6b5747" opacity="0.8"/>
+
+            <!-- Open blank notebook -->
+            <g transform="translate(660, 350)">
+                <!-- Notebook shadow -->
+                <rect x="10" y="10" width="600" height="400" fill="#000000" opacity="0.1" rx="5"/>
+
+                <!-- Left page -->
+                <rect x="0" y="0" width="300" height="400" fill="#fffef8" stroke="#d4c4b0" stroke-width="3" rx="5"/>
+
+                <!-- Right page -->
+                <rect x="300" y="0" width="300" height="400" fill="#ffffff" stroke="#d4c4b0" stroke-width="3" rx="5"/>
+
+                <!-- Binding -->
+                <rect x="295" y="0" width="10" height="400" fill="#8b7355"/>
+                <line x1="295" y1="50" x2="305" y2="50" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="100" x2="305" y2="100" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="150" x2="305" y2="150" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="200" x2="305" y2="200" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="250" x2="305" y2="250" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="300" x2="305" y2="300" stroke="#6b5747" stroke-width="2"/>
+                <line x1="295" y1="350" x2="305" y2="350" stroke="#6b5747" stroke-width="2"/>
+
+                <!-- Faint lines on right page -->
+                <line x1="320" y1="60" x2="580" y2="60" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="100" x2="580" y2="100" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="140" x2="580" y2="140" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="180" x2="580" y2="180" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="220" x2="580" y2="220" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="260" x2="580" y2="260" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="300" x2="580" y2="300" stroke="#e8e8e8" stroke-width="1"/>
+                <line x1="320" y1="340" x2="580" y2="340" stroke="#e8e8e8" stroke-width="1"/>
+            </g>
+
+            <!-- Pencil resting on notebook -->
+            <g transform="translate(1100, 600) rotate(-25)">
+                <rect x="0" y="0" width="200" height="15" fill="#f4d98f" rx="7"/>
+                <polygon points="200,0 220,7.5 200,15" fill="#4a4a4a"/>
+                <rect x="10" y="3" width="20" height="9" fill="#e8b875"/>
+            </g>
+
+            <!-- Fresh flowers in vase -->
+            <g transform="translate(1400, 450)">
+                <ellipse cx="0" cy="120" rx="50" ry="15" fill="#d4c4b0"/>
+                <path d="M -40 120 Q -45 80 -40 50 L 40 50 Q 45 80 40 120 Z" fill="#e8dcc8" opacity="0.7"/>
+
+                <!-- Flowers -->
+                <circle cx="-15" cy="30" r="20" fill="#f4c4d4" opacity="0.8"/>
+                <circle cx="10" cy="15" r="22" fill="#c4d4f4" opacity="0.8"/>
+                <circle cx="15" cy="35" r="18" fill="#f4e4c4" opacity="0.8"/>
+
+                <!-- Stems -->
+                <line x1="-15" y1="50" x2="-15" y2="100" stroke="#7a9a6f" stroke-width="3"/>
+                <line x1="10" y1="37" x2="10" y2="105" stroke="#7a9a6f" stroke-width="3"/>
+                <line x1="15" y1="53" x2="15" y2="102" stroke="#7a9a6f" stroke-width="3"/>
+            </g>
+
+            <!-- Sunbeams coming through window -->
+            <g opacity="0.2">
+                <polygon points="200,0 250,400 150,400" fill="#ffd89a"/>
+                <polygon points="400,0 450,500 350,500" fill="#ffd89a"/>
+                <polygon points="1600,0 1650,450 1550,450" fill="#ffd89a"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- Ending C: Release -->
+    <div class="scene" id="endingC">
+        <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <!-- Gradient from warm café to cool outside -->
+            <defs>
+                <linearGradient id="transitionGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#3d2817;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#6a8c9e;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#b4d4e4;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect width="1920" height="1080" fill="url(#transitionGrad)"/>
+
+            <!-- Doorway in center (leaving) -->
+            <g transform="translate(760, 100)">
+                <!-- Door frame -->
+                <rect x="0" y="0" width="400" height="700" fill="#2d2420" rx="10"/>
+                <rect x="15" y="15" width="370" height="670" fill="#8ac4d4" opacity="0.6" rx="5"/>
+
+                <!-- Bright light through door -->
+                <ellipse cx="200" cy="350" rx="150" ry="250" fill="#ffffff" opacity="0.9" filter="url(#softGlow)"/>
+
+                <!-- Silhouette of outside (trees, sky) -->
+                <path d="M 50 450 Q 50 350 120 300 L 120 670 L 50 670 Z" fill="#4a7a8a" opacity="0.3"/>
+                <path d="M 280 450 Q 280 330 330 290 L 330 670 L 280 670 Z" fill="#4a7a8a" opacity="0.3"/>
+            </g>
+
+            <!-- Floor in foreground -->
+            <ellipse cx="960" cy="1000" rx="900" ry="150" fill="#5a4839" opacity="0.7"/>
+
+            <!-- Cup left behind on floor, fading -->
+            <g transform="translate(960, 850)" opacity="0.4">
+                <ellipse cx="0" cy="50" rx="70" ry="18" fill="#d4c4b0"/>
+                <path d="M -60 50 Q -70 0 -50 -30 L 50 -30 Q 70 0 60 50 Z"
+                      fill="#f5f0e8" stroke="#d4c4b0" stroke-width="2"/>
+                <!-- Coffee spilled -->
+                <ellipse cx="80" cy="60" rx="90" ry="30" fill="#4a2f1f" opacity="0.3"/>
+            </g>
+
+            <!-- Freedom particles (leaves, light) floating away -->
+            <g class="float-away">
+                <path d="M 300 600 Q 310 580 320 600 Q 330 620 320 630 Q 310 620 300 600"
+                      fill="#7a9a6f" opacity="0.5"
+                      style="animation: float 4s ease-in-out infinite"/>
+                <path d="M 1600 550 Q 1610 530 1620 550 Q 1630 570 1620 580 Q 1610 570 1600 550"
+                      fill="#8a9a7f" opacity="0.5"
+                      style="animation: float 5s ease-in-out infinite; animation-delay: 1s"/>
+                <circle cx="500" cy="400" r="5" fill="#b4d4e4" opacity="0.6"
+                        style="animation: float 3s ease-in-out infinite; animation-delay: 0.5s"/>
+                <circle cx="1400" cy="450" r="6" fill="#b4d4e4" opacity="0.6"
+                        style="animation: float 3.5s ease-in-out infinite; animation-delay: 1.5s"/>
+            </g>
+
+            <!-- Path leading away (perspective lines) -->
+            <path d="M 960 900 L 800 400 M 960 900 L 1120 400"
+                  stroke="#7a8a9a" stroke-width="2" opacity="0.3" stroke-dasharray="10,10"/>
+        </svg>
+    </div>
+
+    <script>
+        let currentScene = 1;
+
+        // Automatically transition from scene 1 to scene 2 after 5 seconds
+        setTimeout(() => {
+            transitionTo(2);
+        }, 5000);
+
+        function transitionTo(sceneNumber) {
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+            document.getElementById('scene' + sceneNumber).classList.add('active');
+            currentScene = sceneNumber;
+        }
+
+        function chooseHealing() {
+            transitionTo('A');
+            document.getElementById('endingA').classList.add('active');
+        }
+
+        function chooseUsual() {
+            transitionTo('B');
+            document.getElementById('endingB').classList.add('active');
+        }
+
+        function chooseDump() {
+            transitionTo('C');
+            document.getElementById('endingC').classList.add('active');
+        }
+
+        // Add ambient sound simulation through visual pulsing
+        setInterval(() => {
+            const lights = document.querySelectorAll('.light-particle');
+            lights.forEach(light => {
+                light.style.animationDelay = Math.random() * 3 + 's';
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
