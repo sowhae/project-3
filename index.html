@@ -3,187 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEON CHASE</title>
-    <link rel="stylesheet" href="style.css">
+    <title>NEON CHASE - 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+        }
+
+        /* UI Overlay */
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Start Screen */
+        #start-screen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            transition: opacity 0.5s ease;
+        }
+
+        #start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title {
+            font-size: 6em;
+            font-weight: bold;
+            letter-spacing: 0.3em;
+            color: #0ff;
+            text-shadow:
+                0 0 20px #0ff,
+                0 0 40px #f0f,
+                0 0 60px #0ff;
+            animation: neon-pulse 2s ease-in-out infinite;
+            margin-bottom: 30px;
+        }
+
+        @keyframes neon-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .subtitle {
+            font-size: 1.5em;
+            color: #f0f;
+            letter-spacing: 0.2em;
+            margin-bottom: 60px;
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-size: 2em;
+            font-weight: bold;
+            letter-spacing: 0.3em;
+            background: transparent;
+            border: 3px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            pointer-events: all;
+        }
+
+        .start-btn:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 40px #0ff;
+            transform: scale(1.1);
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #hud.active {
+            opacity: 1;
+        }
+
+        .speedometer {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #f0f;
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+
+        .speed-value {
+            font-size: 4em;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 20px #0ff;
+        }
+
+        .speed-label {
+            font-size: 1em;
+            color: #f0f;
+            letter-spacing: 0.3em;
+        }
+
+        .warning {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5em;
+            letter-spacing: 0.3em;
+            color: #f00;
+            text-shadow: 0 0 30px #f00;
+            animation: flicker 0.5s infinite;
+            opacity: 0;
+        }
+
+        .warning.active {
+            opacity: 1;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Choice System */
+        #choices {
+            position: fixed;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 60px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 150;
+        }
+
+        #choices.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .choice {
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .choice:hover {
+            transform: scale(1.2) translateY(-20px);
+        }
+
+        .choice-icon {
+            width: 120px;
+            height: 120px;
+            border: 3px solid #0ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            margin: 0 auto 15px;
+        }
+
+        .choice:hover .choice-icon {
+            border-color: #f0f;
+            box-shadow: 0 0 60px rgba(255, 0, 255, 1);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .choice-label {
+            font-size: 1.3em;
+            letter-spacing: 0.2em;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+
+        /* Ending Screen */
+        #ending-screen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 250;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+
+        #ending-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .ending-title {
+            font-size: 5em;
+            font-weight: bold;
+            letter-spacing: 0.3em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .ending-desc {
+            font-size: 1.8em;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .restart-btn {
+            margin-top: 60px;
+            padding: 15px 50px;
+            font-size: 1.5em;
+            background: transparent;
+            border: 2px solid #0ff;
+            color: #0ff;
+            cursor: pointer;
+            letter-spacing: 0.2em;
+            transition: all 0.3s ease;
+            pointer-events: all;
+        }
+
+        .restart-btn:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 30px #0ff;
+        }
+
+        /* Crosshair */
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 255, 0.5);
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 10px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .crosshair::after {
+            width: 10px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
 </head>
 <body>
-    <!-- Scene Container -->
-    <div id="game-container">
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
 
-        <!-- Intro Scene: Bar -->
-        <div id="scene-bar" class="scene active">
-            <div class="scene-layers">
-                <!-- 3D Background Layers -->
-                <div class="layer layer-far" style="background-image: url('cafe.png')"></div>
-                <div class="layer layer-mid neon-overlay"></div>
-
-                <!-- Floating Elements -->
-                <div class="floating-bottles">
-                    <div class="bottle" style="--x: 20%; --y: 30%; --delay: 0s;"></div>
-                    <div class="bottle" style="--x: 60%; --y: 50%; --delay: 0.5s;"></div>
-                    <div class="bottle" style="--x: 80%; --y: 40%; --delay: 1s;"></div>
-                </div>
-
-                <!-- Police Drones -->
-                <div class="drones">
-                    <div class="drone" style="--start-x: -10%; --end-x: 110%; --delay: 0s;"></div>
-                    <div class="drone" style="--start-x: 110%; --end-x: -10%; --delay: 2s;"></div>
-                </div>
-
-                <!-- Glitch Effects -->
-                <div class="glitch-overlay"></div>
-            </div>
-
-            <!-- Minimal Text -->
-            <div class="scene-text">
-                <h1 class="neon-title">NEON CHASE</h1>
-                <p class="subtitle">/// CHAOS IN THE BAR ///</p>
-            </div>
-
-            <!-- Start Button -->
-            <button class="start-btn pulse-neon" onclick="startChase()">
-                <span class="btn-icon">⚡</span>
-                RIDE
-            </button>
-        </div>
-
-        <!-- Chase Scene: Motorcycle POV -->
-        <div id="scene-chase" class="scene">
-            <div class="motorcycle-pov">
-                <!-- Motion Blur Background -->
-                <div class="motion-blur-bg layer-far"></div>
-                <div class="motion-blur-bg layer-mid"></div>
-                <div class="motion-blur-bg layer-near"></div>
-
-                <!-- 3D City Elements -->
-                <div class="city-elements">
-                    <div class="building-layer left"></div>
-                    <div class="building-layer right"></div>
-                </div>
-
-                <!-- Speed Lines -->
-                <div class="speed-lines">
-                    <div class="line" style="--pos: 10%;"></div>
-                    <div class="line" style="--pos: 30%;"></div>
-                    <div class="line" style="--pos: 50%;"></div>
-                    <div class="line" style="--pos: 70%;"></div>
-                    <div class="line" style="--pos: 90%;"></div>
-                </div>
-
-                <!-- Motorcycle Dashboard (bottom view) -->
-                <div class="dashboard">
-                    <div class="handlebar left"></div>
-                    <div class="handlebar right"></div>
-                    <div class="speedometer">
-                        <div class="speed-value">248</div>
-                        <div class="speed-label">KM/H</div>
-                    </div>
-                </div>
-
-                <!-- Chase Elements -->
-                <div class="chase-drones">
-                    <div class="chase-drone" style="--pos: 20%;"></div>
-                    <div class="chase-drone" style="--pos: 50%;"></div>
-                    <div class="chase-drone" style="--pos: 80%;"></div>
-                </div>
-
-                <!-- Warning Text -->
-                <div class="warning-text flicker">
-                    DETECTED /// CHOOSE PATH
-                </div>
-            </div>
-
-            <!-- Choice System (Visual Icons) -->
-            <div class="choices">
-                <div class="choice" onclick="chooseEnding('blend')" data-hint="BLEND">
-                    <div class="choice-icon crowd-icon">
-                        <div class="icon-visual">
-                            <span class="icon-sym">👥</span>
-                            <div class="icon-glow"></div>
-                        </div>
-                    </div>
-                    <div class="choice-label">DISAPPEAR</div>
-                </div>
-
-                <div class="choice" onclick="chooseEnding('run')" data-hint="RUN">
-                    <div class="choice-icon speed-icon">
-                        <div class="icon-visual">
-                            <span class="icon-sym">⚡</span>
-                            <div class="icon-glow"></div>
-                        </div>
-                    </div>
-                    <div class="choice-label">ACCELERATE</div>
-                </div>
-
-                <div class="choice" onclick="chooseEnding('hack')" data-hint="HACK">
-                    <div class="choice-icon hack-icon">
-                        <div class="icon-visual">
-                            <span class="icon-sym">◈</span>
-                            <div class="icon-glow"></div>
-                        </div>
-                    </div>
-                    <div class="choice-label">MERGE</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ending A: Return Changed -->
-        <div id="ending-blend" class="scene ending">
-            <div class="ending-visual">
-                <div class="layer layer-far distorted" style="background-image: url('cafe.png')"></div>
-                <div class="color-shift-overlay"></div>
-                <div class="pixel-crowd"></div>
-
-                <div class="ending-text fade-in">
-                    <h2 class="ending-title glitch-text">RETURN CHANGED</h2>
-                    <p class="ending-desc">The drones pass you by<br>
-                    But the city will never look the same</p>
-                </div>
-            </div>
-            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
-        </div>
-
-        <!-- Ending B: Drive Into Void -->
-        <div id="ending-run" class="scene ending">
-            <div class="ending-visual">
-                <div class="infinite-tunnel"></div>
-                <div class="light-burst"></div>
-                <div class="motorcycle-silhouette"></div>
-
-                <div class="ending-text fade-in">
-                    <h2 class="ending-title neon-pulse">DRIVE INTO VOID</h2>
-                    <p class="ending-desc">You burst into infinite light<br>
-                    Speed becomes existence</p>
-                </div>
-            </div>
-            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
-        </div>
-
-        <!-- Ending C: Become the Glitch -->
-        <div id="ending-hack" class="scene ending">
-            <div class="ending-visual">
-                <div class="pixelation-effect"></div>
-                <div class="digital-merge">
-                    <div class="code-rain"></div>
-                    <div class="circuit-pattern"></div>
-                </div>
-
-                <div class="ending-text fade-in">
-                    <h2 class="ending-title digital-glitch">BECOME THE GLITCH</h2>
-                    <p class="ending-desc">You don't escape<br>
-                    You merge with the neon system</p>
-                </div>
-            </div>
-            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
-        </div>
-
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="title">NEON CHASE</div>
+        <div class="subtitle">/// NIGHT CITY PURSUIT ///</div>
+        <button class="start-btn" onclick="startGame()">⚡ RIDE ⚡</button>
     </div>
 
-    <!-- Audio (optional) -->
-    <audio id="ambient-sound" loop>
-        <source src="ambient.mp3" type="audio/mpeg">
-    </audio>
+    <!-- HUD -->
+    <div id="hud">
+        <div class="speedometer">
+            <div class="speed-value" id="speed">0</div>
+            <div class="speed-label">KM/H</div>
+        </div>
+        <div class="warning" id="warning">/// DETECTED ///</div>
+        <div class="crosshair"></div>
+    </div>
 
+    <!-- Choices -->
+    <div id="choices">
+        <div class="choice" onclick="chooseEnding('blend')">
+            <div class="choice-icon">👥</div>
+            <div class="choice-label">DISAPPEAR</div>
+        </div>
+        <div class="choice" onclick="chooseEnding('run')">
+            <div class="choice-icon">⚡</div>
+            <div class="choice-label">ACCELERATE</div>
+        </div>
+        <div class="choice" onclick="chooseEnding('hack')">
+            <div class="choice-icon">◈</div>
+            <div class="choice-label">MERGE</div>
+        </div>
+    </div>
+
+    <!-- Ending Screen -->
+    <div id="ending-screen">
+        <div class="ending-title" id="ending-title"></div>
+        <div class="ending-desc" id="ending-desc"></div>
+        <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
