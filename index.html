@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THE NIGHT THAT WON'T END - Interactive</title>
+    <title>THE NIGHT THAT WON'T END</title>
     <style>
         * {
             margin: 0;
@@ -14,164 +14,511 @@
         body {
             font-family: 'Courier New', monospace;
             background: #000;
-            color: #00ffff;
             overflow: hidden;
             height: 100vh;
-            cursor: crosshair;
+            perspective: 1000px;
         }
 
-        #game-container {
+        /* 3D Scene Container */
+        #scene-3d {
             position: relative;
             width: 100vw;
             height: 100vh;
+            transform-style: preserve-3d;
+            perspective: 800px;
+            background: linear-gradient(to bottom, #0a0015 0%, #1a0030 50%, #2a1040 100%);
         }
 
-        #background-image {
+        /* Animated Street Ground */
+        .street {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60%;
+            background: linear-gradient(to bottom,
+                rgba(20, 0, 40, 0.8) 0%,
+                rgba(10, 0, 20, 0.95) 100%);
+            transform: rotateX(75deg) translateZ(-300px);
+            transform-origin: bottom;
+            overflow: hidden;
+        }
+
+        /* Street Lines */
+        .street-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 80px,
+                rgba(0, 255, 255, 0.3) 80px,
+                rgba(0, 255, 255, 0.3) 85px
+            );
+            animation: street-move 3s linear infinite;
+        }
+
+        @keyframes street-move {
+            from { transform: translateY(0); }
+            to { transform: translateY(85px); }
+        }
+
+        /* Buildings */
+        .building {
+            position: absolute;
+            bottom: 40%;
+            background: rgba(10, 0, 30, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transform-style: preserve-3d;
+        }
+
+        .building-1 {
+            left: 5%;
+            width: 150px;
+            height: 400px;
+            box-shadow: inset 0 0 50px rgba(255, 0, 255, 0.3),
+                        0 0 100px rgba(255, 0, 255, 0.5);
+        }
+
+        .building-2 {
+            left: 25%;
+            width: 120px;
+            height: 300px;
+            box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.3),
+                        0 0 100px rgba(0, 255, 255, 0.5);
+        }
+
+        .building-3 {
+            right: 5%;
+            width: 180px;
+            height: 450px;
+            box-shadow: inset 0 0 50px rgba(255, 0, 150, 0.3),
+                        0 0 100px rgba(255, 0, 150, 0.5);
+        }
+
+        .building-4 {
+            right: 30%;
+            width: 100px;
+            height: 250px;
+            box-shadow: inset 0 0 50px rgba(0, 150, 255, 0.3),
+                        0 0 100px rgba(0, 150, 255, 0.5);
+        }
+
+        /* Building Windows */
+        .building::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(0, 255, 255, 0.2) 20px, rgba(0, 255, 255, 0.2) 22px),
+                repeating-linear-gradient(90deg, transparent, transparent 15px, rgba(0, 255, 255, 0.2) 15px, rgba(0, 255, 255, 0.2) 17px);
+            animation: window-flicker 3s infinite;
+        }
+
+        @keyframes window-flicker {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Volumetric Rain */
+        .rain-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            z-index: 0;
-            filter: brightness(0.6) contrast(1.2);
-            transition: filter 0.5s;
+            pointer-events: none;
+            overflow: hidden;
         }
 
-        .hud-top {
+        .rain-drop {
             position: absolute;
-            top: 20px;
+            width: 2px;
+            height: 80px;
+            background: linear-gradient(to bottom,
+                transparent,
+                rgba(0, 255, 255, 0.6),
+                transparent);
+            animation: rain-fall linear infinite;
+        }
+
+        @keyframes rain-fall {
+            from {
+                transform: translateY(-100px) translateZ(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100vh) translateZ(0);
+                opacity: 0.3;
+            }
+        }
+
+        /* Fog Layer */
+        .fog {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: radial-gradient(ellipse at bottom,
+                rgba(100, 0, 150, 0.3) 0%,
+                transparent 70%);
+            animation: fog-drift 20s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes fog-drift {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(100px); }
+        }
+
+        /* Neon Sign Glow */
+        .neon-sign {
+            position: absolute;
+            top: 20%;
+            font-size: 4em;
+            color: #ff00ff;
+            text-shadow:
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 40px #ff00ff,
+                0 0 80px #ff00ff;
+            animation: neon-flicker 4s infinite;
+            font-weight: bold;
+            letter-spacing: 10px;
+        }
+
+        .neon-sign-1 {
+            left: 8%;
+            transform: rotate(-2deg);
+        }
+
+        .neon-sign-2 {
+            right: 8%;
+            color: #00ffff;
+            text-shadow:
+                0 0 10px #00ffff,
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+        }
+
+        @keyframes neon-flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 1;
+            }
+            20%, 24%, 55% {
+                opacity: 0.4;
+            }
+        }
+
+        /* 3D Interactive Objects Container */
+        #interactive-container {
+            position: absolute;
+            bottom: 20%;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 100;
-            text-align: center;
+            width: 80%;
+            height: 400px;
+            transform-style: preserve-3d;
+            perspective: 1000px;
         }
 
-        .hud-title {
-            font-size: 2em;
-            color: #ff00ff;
-            text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
-            letter-spacing: 4px;
-            animation: text-glitch 3s infinite;
+        .interactive-object-3d {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            transform-style: preserve-3d;
         }
 
-        .hud-warning {
-            color: #ff0066;
-            font-size: 0.9em;
-            margin-top: 10px;
-            text-shadow: 0 0 10px #ff0066;
-            animation: pulse 2s infinite;
+        .interactive-object-3d:hover {
+            transform: scale(1.2) translateZ(50px);
+            filter: drop-shadow(0 0 40px currentColor);
         }
 
-        @keyframes text-glitch {
+        /* 3D Person */
+        #person-3d {
+            left: 15%;
+            bottom: 0;
+        }
+
+        .person-body {
+            width: 100px;
+            height: 180px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: person-glitch 2s infinite;
+        }
+
+        @keyframes person-glitch {
             0%, 98%, 100% {
-                text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+                transform: translateX(0);
             }
             99% {
-                text-shadow: 2px 0 10px #ff00ff, -2px 0 10px #00ffff;
+                transform: translateX(5px);
             }
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .person-head {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #00ffff, #0088ff);
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            box-shadow: 0 0 30px #00ffff, inset 0 0 20px rgba(0, 0, 0, 0.5);
+            animation: head-pulse 2s infinite;
         }
 
-        .scene-description {
+        @keyframes head-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .person-torso {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(135deg, #00ffff, #0066ff);
+            margin: 0 auto;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+
+        .person-legs {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(180deg, #0066ff, #003366);
+            margin: 5px auto;
+            border-radius: 5px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .person-label {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            font-size: 0.8em;
+            white-space: nowrap;
+            text-shadow: 0 0 10px #00ffff;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .interactive-object-3d:hover .person-label,
+        .interactive-object-3d:hover .can-label,
+        .interactive-object-3d:hover .wheel-label {
+            opacity: 1;
+        }
+
+        /* 3D Spray Can */
+        #spray-can-3d {
+            right: 20%;
+            bottom: 50px;
+        }
+
+        .spray-can-body {
+            width: 60px;
+            height: 120px;
+            background: linear-gradient(180deg, #00ffff, #0099ff, #0066ff);
+            border-radius: 15px;
+            position: relative;
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.7),
+                inset -5px 0 10px rgba(0, 0, 0, 0.3),
+                inset 5px 0 10px rgba(255, 255, 255, 0.2),
+                0 0 30px rgba(0, 255, 255, 0.6);
+            transform: rotateX(10deg);
+        }
+
+        .spray-cap {
+            width: 40px;
+            height: 20px;
+            background: linear-gradient(180deg, #ff00ff, #cc00cc);
+            border-radius: 10px 10px 5px 5px;
+            position: absolute;
+            top: -15px;
+            left: 10px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+        }
+
+        .spray-particles {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00ffff;
+            border-radius: 50%;
+            animation: spray-particle 1.5s infinite;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        @keyframes spray-particle {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), -80px);
+                opacity: 0;
+            }
+        }
+
+        .particle:nth-child(1) { --tx: -10px; animation-delay: 0s; }
+        .particle:nth-child(2) { --tx: 0px; animation-delay: 0.2s; }
+        .particle:nth-child(3) { --tx: 10px; animation-delay: 0.4s; }
+        .particle:nth-child(4) { --tx: -15px; animation-delay: 0.6s; }
+        .particle:nth-child(5) { --tx: 15px; animation-delay: 0.8s; }
+
+        .can-label {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            font-size: 0.8em;
+            white-space: nowrap;
+            text-shadow: 0 0 10px #00ffff;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* 3D Steering Wheel */
+        #wheel-3d {
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+        }
+
+        .wheel-outer {
+            width: 150px;
+            height: 150px;
+            border: 12px solid #ff00ff;
+            border-radius: 50%;
+            position: relative;
+            box-shadow:
+                0 0 30px rgba(255, 0, 255, 0.8),
+                inset 0 0 30px rgba(255, 0, 255, 0.4),
+                0 20px 40px rgba(0, 0, 0, 0.7);
+            animation: wheel-rotate 4s linear infinite;
+            background: radial-gradient(circle, rgba(100, 0, 150, 0.3), transparent);
+        }
+
+        @keyframes wheel-rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .wheel-spoke {
+            position: absolute;
+            width: 8px;
+            height: 60px;
+            background: linear-gradient(180deg, #ff00ff, #cc00ff);
+            top: 50%;
+            left: 50%;
+            transform-origin: center;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+        }
+
+        .wheel-spoke:nth-child(1) { transform: translate(-50%, -50%) rotate(0deg); }
+        .wheel-spoke:nth-child(2) { transform: translate(-50%, -50%) rotate(90deg); }
+        .wheel-spoke:nth-child(3) { transform: translate(-50%, -50%) rotate(45deg); height: 80px; }
+        .wheel-spoke:nth-child(4) { transform: translate(-50%, -50%) rotate(135deg); height: 80px; }
+
+        .wheel-center {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #00ffff, #0088ff);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 30px #00ffff;
+            animation: center-pulse 1.5s infinite;
+        }
+
+        @keyframes center-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .speed-lines {
+            position: absolute;
+            right: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .speed-line {
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #00ffff, transparent);
+            margin: 8px 0;
+            animation: speed-line-move 1s infinite;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        .speed-line:nth-child(1) { animation-delay: 0s; }
+        .speed-line:nth-child(2) { animation-delay: 0.2s; }
+        .speed-line:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes speed-line-move {
+            0% { transform: translateX(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(30px); opacity: 0; }
+        }
+
+        .wheel-label {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff00ff;
+            font-size: 0.8em;
+            white-space: nowrap;
+            text-shadow: 0 0 10px #ff00ff;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* Description Box */
+        .description-box {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 80%;
-            max-width: 900px;
-            padding: 20px 30px;
-            background: rgba(0, 0, 30, 0.9);
-            border: 2px solid #00ffff;
-            border-radius: 5px;
-            font-size: 1.1em;
+            max-width: 700px;
+            padding: 20px;
+            background: rgba(0, 0, 20, 0.85);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 10px;
+            font-size: 1em;
             line-height: 1.6;
-            text-shadow: 0 0 5px #00ffff;
-            z-index: 100;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-        }
-
-        /* Interactive Objects Container */
-        #interactive-objects {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 50;
-        }
-
-        .interactive-object {
-            position: absolute;
-            cursor: pointer;
-            transition: transform 0.3s, filter 0.3s;
-            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8));
-        }
-
-        .interactive-object:hover {
-            transform: scale(1.15);
-            filter: drop-shadow(0 0 30px rgba(255, 0, 255, 1));
-            animation: object-glow 1s infinite;
-        }
-
-        @keyframes object-glow {
-            0%, 100% {
-                filter: drop-shadow(0 0 30px rgba(255, 0, 255, 1));
-            }
-            50% {
-                filter: drop-shadow(0 0 50px rgba(0, 255, 255, 1));
-            }
-        }
-
-        /* Person Silhouette */
-        #person-object {
-            top: 35%;
-            left: 20%;
-        }
-
-        /* Spray Can */
-        #spray-can-object {
-            bottom: 25%;
-            right: 25%;
-        }
-
-        /* Steering Wheel */
-        #wheel-object {
-            top: 45%;
-            right: 15%;
-        }
-
-        .object-label {
-            position: absolute;
-            bottom: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.8em;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-
-        .interactive-object:hover .object-label {
-            opacity: 1;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         /* Ending Overlay */
         .ending-overlay {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 200;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
             display: none;
             align-items: center;
             justify-content: center;
@@ -186,19 +533,19 @@
         .ending-content {
             width: 80%;
             max-width: 800px;
-            padding: 40px;
-            background: rgba(0, 0, 50, 0.95);
-            border: 3px solid #ff0066;
-            box-shadow: 0 0 50px rgba(255, 0, 102, 0.8);
+            padding: 50px;
+            background: rgba(10, 0, 30, 0.95);
+            border: 3px solid;
+            border-radius: 15px;
             text-align: center;
+            box-shadow: 0 0 100px currentColor;
         }
 
         .ending-title {
-            font-size: 2.5em;
-            color: #ff0066;
-            text-shadow: 0 0 30px #ff0066;
+            font-size: 3em;
             margin-bottom: 30px;
             animation: ending-pulse 2s infinite;
+            letter-spacing: 5px;
         }
 
         @keyframes ending-pulse {
@@ -207,29 +554,28 @@
         }
 
         .ending-text {
-            font-size: 1.2em;
+            font-size: 1.3em;
             line-height: 2;
             color: #ffffff;
-            text-shadow: 0 0 5px #00ffff;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         #restart-button {
-            padding: 15px 40px;
-            background: rgba(255, 0, 102, 0.3);
-            border: 2px solid #ff0066;
+            padding: 20px 50px;
+            background: rgba(255, 0, 100, 0.3);
+            border: 3px solid;
             color: #ffffff;
-            font-size: 1.1em;
+            font-size: 1.2em;
             font-family: 'Courier New', monospace;
             cursor: pointer;
             transition: all 0.3s;
-            text-shadow: 0 0 10px #ff0066;
+            border-radius: 10px;
+            text-shadow: 0 0 10px currentColor;
         }
 
         #restart-button:hover {
-            background: rgba(255, 0, 102, 0.6);
-            box-shadow: 0 0 30px #ff0066;
             transform: scale(1.1);
+            box-shadow: 0 0 50px currentColor;
         }
 
         /* Scanlines */
@@ -241,272 +587,186 @@
             height: 100%;
             background: repeating-linear-gradient(
                 0deg,
-                rgba(0, 0, 0, 0.1) 0px,
-                transparent 1px,
+                rgba(0, 0, 0, 0.15) 0px,
                 transparent 2px,
-                rgba(0, 0, 0, 0.1) 3px
+                transparent 4px,
+                rgba(0, 0, 0, 0.15) 6px
             );
             pointer-events: none;
-            z-index: 300;
-        }
-
-        .hint-text {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ff00ff;
-            font-size: 0.9em;
-            text-shadow: 0 0 10px #ff00ff;
-            animation: pulse 2s infinite;
-            z-index: 100;
+            z-index: 999;
         }
     </style>
 </head>
 <body>
     <div class="scanlines"></div>
 
-    <div id="game-container">
-        <img id="background-image" src="looped.png" alt="Cyberpunk Night">
+    <div id="scene-3d">
+        <!-- Rain -->
+        <div class="rain-container" id="rain"></div>
 
-        <div class="hud-top">
-            <div class="hud-title">SCENARIO 10</div>
-            <div class="hud-warning">◆ TEMPORAL SYNC ERROR / 01 ◆</div>
+        <!-- Buildings -->
+        <div class="building building-1"></div>
+        <div class="building building-2"></div>
+        <div class="building building-3"></div>
+        <div class="building building-4"></div>
+
+        <!-- Neon Signs -->
+        <div class="neon-sign neon-sign-1">LOOP</div>
+        <div class="neon-sign neon-sign-2">NIGHT</div>
+
+        <!-- Street -->
+        <div class="street">
+            <div class="street-lines"></div>
         </div>
 
-        <div id="scene-desc" class="scene-description">
-            <strong style="color: #ff00ff;">THE LOOPING STREET</strong><br>
-            Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.<br>
-            <span style="color: #00ffff;">You are the only thing in sharp focus.</span>
-        </div>
-
-        <div class="hint-text" id="hint">
-            ↑ CLICK ON OBJECTS TO INTERACT ↑
-        </div>
+        <!-- Fog -->
+        <div class="fog"></div>
 
         <!-- Interactive Objects -->
-        <div id="interactive-objects">
-            <!-- Person Silhouette -->
-            <div id="person-object" class="interactive-object" onclick="choiceA()">
-                <svg width="100" height="150" viewBox="0 0 100 150">
-                    <defs>
-                        <filter id="glow-person">
-                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                            <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    <!-- Person silhouette -->
-                    <ellipse cx="50" cy="25" rx="20" ry="25" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <rect x="30" y="50" width="40" height="60" rx="10" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <rect x="25" y="60" width="15" height="50" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <rect x="60" y="60" width="15" height="50" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <rect x="35" y="110" width="15" height="35" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <rect x="50" y="110" width="15" height="35" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
-                    <!-- Glitch effect -->
-                    <circle cx="40" cy="20" r="3" fill="#ff00ff" opacity="0.6">
-                        <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="60" cy="22" r="3" fill="#ff00ff" opacity="0.6">
-                        <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
-                    </circle>
-                </svg>
-                <div class="object-label">TALK TO PERSON</div>
+        <div id="interactive-container">
+            <!-- Person -->
+            <div id="person-3d" class="interactive-object-3d" onclick="choiceA()">
+                <div class="person-body">
+                    <div class="person-head"></div>
+                    <div class="person-torso"></div>
+                    <div class="person-legs"></div>
+                </div>
+                <div class="person-label">▸ TALK TO PERSON</div>
             </div>
 
             <!-- Spray Can -->
-            <div id="spray-can-object" class="interactive-object" onclick="choiceB()">
-                <svg width="80" height="120" viewBox="0 0 80 120">
-                    <defs>
-                        <filter id="glow-spray">
-                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                            <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                        <linearGradient id="canGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#0099ff;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-                    <!-- Spray cap -->
-                    <rect x="25" y="10" width="30" height="15" rx="3" fill="#ff00ff" filter="url(#glow-spray)"/>
-                    <rect x="30" y="5" width="20" height="10" rx="2" fill="#ff00ff" filter="url(#glow-spray)"/>
-                    <!-- Can body -->
-                    <rect x="20" y="25" width="40" height="70" rx="5" fill="url(#canGradient)" filter="url(#glow-spray)"/>
-                    <!-- Can bottom -->
-                    <ellipse cx="40" cy="95" rx="20" ry="8" fill="#0066ff" filter="url(#glow-spray)"/>
-                    <!-- Label -->
-                    <rect x="25" y="45" width="30" height="20" rx="2" fill="#000" opacity="0.3"/>
-                    <text x="40" y="60" text-anchor="middle" font-size="10" fill="#00ffff" font-family="monospace">NEO</text>
-                    <!-- Spray particles -->
-                    <circle cx="40" cy="8" r="2" fill="#00ffff" opacity="0.8">
-                        <animate attributeName="cy" from="8" to="-10" dur="0.8s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" from="0.8" to="0" dur="0.8s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="35" cy="10" r="1.5" fill="#00ffff" opacity="0.6">
-                        <animate attributeName="cy" from="10" to="-5" dur="1s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" from="0.6" to="0" dur="1s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="45" cy="9" r="1.5" fill="#00ffff" opacity="0.6">
-                        <animate attributeName="cy" from="9" to="-8" dur="0.9s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" from="0.6" to="0" dur="0.9s" repeatCount="indefinite"/>
-                    </circle>
-                </svg>
-                <div class="object-label">SPRAY GRAFFITI</div>
+            <div id="spray-can-3d" class="interactive-object-3d" onclick="choiceB()">
+                <div class="spray-can-body">
+                    <div class="spray-cap"></div>
+                    <div class="spray-particles">
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                    </div>
+                </div>
+                <div class="can-label">▸ SPRAY GRAFFITI</div>
             </div>
 
             <!-- Steering Wheel -->
-            <div id="wheel-object" class="interactive-object" onclick="choiceC()">
-                <svg width="140" height="140" viewBox="0 0 140 140">
-                    <defs>
-                        <filter id="glow-wheel">
-                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                            <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                        <radialGradient id="wheelGradient">
-                            <stop offset="0%" style="stop-color:#ff00ff;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#9900ff;stop-opacity:1" />
-                        </radialGradient>
-                    </defs>
-                    <!-- Outer wheel -->
-                    <circle cx="70" cy="70" r="60" fill="none" stroke="url(#wheelGradient)" stroke-width="8" filter="url(#glow-wheel)"/>
-                    <!-- Inner circle -->
-                    <circle cx="70" cy="70" r="20" fill="url(#wheelGradient)" filter="url(#glow-wheel)"/>
-                    <!-- Spokes -->
-                    <line x1="70" y1="50" x2="70" y2="20" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
-                    <line x1="70" y1="90" x2="70" y2="120" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
-                    <line x1="50" y1="70" x2="20" y2="70" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
-                    <line x1="90" y1="70" x2="120" y2="70" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
-                    <!-- Center logo -->
-                    <circle cx="70" cy="70" r="8" fill="#00ffff" filter="url(#glow-wheel)">
-                        <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/>
-                    </circle>
-                    <!-- Speed lines effect -->
-                    <g opacity="0.4">
-                        <path d="M 130 70 L 145 70" stroke="#00ffff" stroke-width="2">
-                            <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite"/>
-                        </path>
-                        <path d="M 130 65 L 145 65" stroke="#00ffff" stroke-width="2">
-                            <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
-                        </path>
-                        <path d="M 130 75 L 145 75" stroke="#00ffff" stroke-width="2">
-                            <animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite"/>
-                        </path>
-                    </g>
-                </svg>
-                <div class="object-label">DRIVE INTO BLUR</div>
+            <div id="wheel-3d" class="interactive-object-3d" onclick="choiceC()">
+                <div class="wheel-outer">
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-spoke"></div>
+                    <div class="wheel-center"></div>
+                </div>
+                <div class="speed-lines">
+                    <div class="speed-line"></div>
+                    <div class="speed-line"></div>
+                    <div class="speed-line"></div>
+                </div>
+                <div class="wheel-label">▸ DRIVE INTO VOID</div>
             </div>
         </div>
 
-        <!-- Ending Overlay -->
-        <div id="ending-overlay" class="ending-overlay">
-            <div class="ending-content">
-                <div id="ending-title" class="ending-title"></div>
-                <div id="ending-text" class="ending-text"></div>
-                <button id="restart-button" onclick="restart()">⟲ RESTART SIMULATION</button>
-            </div>
+        <!-- Description -->
+        <div id="description" class="description-box">
+            <strong style="color: #00ffff;">THE LOOPING STREET</strong><br>
+            Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop. Pedestrians repeat like corrupted holograms. Digital billboards flicker.<br>
+            <span style="color: #ff00ff;">You are the only thing in sharp focus.</span>
+        </div>
+    </div>
+
+    <!-- Ending Overlay -->
+    <div id="ending-overlay" class="ending-overlay">
+        <div id="ending-content" class="ending-content">
+            <div id="ending-title" class="ending-title"></div>
+            <div id="ending-text" class="ending-text"></div>
+            <button id="restart-button" onclick="restart()">⟲ RESTART</button>
         </div>
     </div>
 
     <script>
-        const backgroundImage = document.getElementById('background-image');
-        const interactiveObjects = document.getElementById('interactive-objects');
-        const endingOverlay = document.getElementById('ending-overlay');
-        const endingTitle = document.getElementById('ending-title');
-        const endingText = document.getElementById('ending-text');
-        const sceneDesc = document.getElementById('scene-desc');
-        const hint = document.getElementById('hint');
+        // Create rain
+        const rainContainer = document.getElementById('rain');
+        for (let i = 0; i < 100; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'rain-drop';
+            drop.style.left = Math.random() * 100 + '%';
+            drop.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
+            drop.style.animationDelay = Math.random() * 2 + 's';
+            rainContainer.appendChild(drop);
+        }
 
         function choiceA() {
-            // Hide interactive objects
-            interactiveObjects.style.display = 'none';
-            sceneDesc.style.display = 'none';
-            hint.style.display = 'none';
+            document.getElementById('scene-3d').style.display = 'none';
+            const overlay = document.getElementById('ending-overlay');
+            const content = document.getElementById('ending-content');
+            const title = document.getElementById('ending-title');
+            const text = document.getElementById('ending-text');
 
-            // Change background
-            backgroundImage.src = 'person pov.jpg';
-
-            // Show ending
-            setTimeout(() => {
-                endingOverlay.style.display = 'flex';
-                endingTitle.innerHTML = '⚠ ENDING A: FADE OUT';
-                endingTitle.style.color = '#ff0066';
-                endingText.innerHTML = `
-                    You approach a man who keeps dropping his umbrella.<br><br>
-                    You say hello. He freezes mid-motion. His eyes blink out of sync, like two video layers trying to align.<br><br>
-                    Then your arm twitches. Your foot steps backward on its own.<br><br>
-                    You drop your keys. Pick them up. Drop them. Pick them up.<br><br>
-                    <span style="color: #ff0066; font-weight: bold;">Looping. Glitched.</span><br><br>
-                    <span style="color: #666; font-style: italic;">You join the cycle. Street keeps looping. Nobody knows you ever stopped.</span>
-                `;
-            }, 1000);
+            overlay.style.display = 'flex';
+            content.style.borderColor = '#ff0066';
+            content.style.color = '#ff0066';
+            title.innerHTML = '⚠ ENDING A: FADE OUT';
+            title.style.color = '#ff0066';
+            title.style.textShadow = '0 0 30px #ff0066, 0 0 60px #ff0066';
+            text.innerHTML = `
+                You approach a man who keeps dropping his umbrella.<br><br>
+                You say hello. He freezes mid-motion. His eyes blink out of sync, like two video layers trying to align.<br><br>
+                Then your arm twitches. Your foot steps backward on its own.<br><br>
+                You drop your keys. Pick them up. Drop them. Pick them up.<br><br>
+                <span style="color: #ff0066; font-weight: bold; font-size: 1.2em;">Looping. Glitched.</span><br><br>
+                <span style="color: #666; font-style: italic;">You join the cycle. Street keeps looping. Nobody knows you ever stopped.</span>
+            `;
         }
 
         function choiceB() {
-            // Hide interactive objects
-            interactiveObjects.style.display = 'none';
-            sceneDesc.style.display = 'none';
-            hint.style.display = 'none';
+            document.getElementById('scene-3d').style.display = 'none';
+            const overlay = document.getElementById('ending-overlay');
+            const content = document.getElementById('ending-content');
+            const title = document.getElementById('ending-title');
+            const text = document.getElementById('ending-text');
 
-            // Keep background
-            backgroundImage.src = 'looped.png';
-            backgroundImage.style.filter = 'brightness(0.8) saturate(1.5) hue-rotate(10deg)';
-
-            // Show ending
-            setTimeout(() => {
-                endingOverlay.style.display = 'flex';
-                endingTitle.innerHTML = '✓ ENDING B: RETURN CHANGED';
-                endingTitle.style.color = '#00ff00';
-                endingText.innerHTML = `
-                    You paint graffiti on a brick wall — bright electric blue.<br><br>
-                    The world resets. Pedestrians rewind. Cars jump back to frame one.<br><br>
-                    But the graffiti stays. It glows.<br><br>
-                    Reality flickers like a broken game engine. Then—everything snaps back to normal daylight.<br><br>
-                    <span style="color: #00ff00; font-weight: bold;">Except the graffiti. Still glowing.</span><br><br>
-                    <span style="color: #00ffff; font-style: italic;">You escaped the loop, but something in the world has been rewritten.</span>
-                `;
-            }, 1000);
+            overlay.style.display = 'flex';
+            content.style.borderColor = '#00ff00';
+            content.style.color = '#00ff00';
+            title.innerHTML = '✓ ENDING B: RETURN CHANGED';
+            title.style.color = '#00ff00';
+            title.style.textShadow = '0 0 30px #00ff00, 0 0 60px #00ff00';
+            text.innerHTML = `
+                You paint graffiti on a brick wall — bright electric blue.<br><br>
+                The world resets. Pedestrians rewind. Cars jump back to frame one.<br><br>
+                But the graffiti stays. It glows.<br><br>
+                Reality flickers like a broken game engine. Then—everything snaps back to normal daylight.<br><br>
+                <span style="color: #00ff00; font-weight: bold; font-size: 1.2em;">Except the graffiti. Still glowing.</span><br><br>
+                <span style="color: #00ffff; font-style: italic;">You escaped the loop, but something in the world has been rewritten.</span>
+            `;
         }
 
         function choiceC() {
-            // Hide interactive objects
-            interactiveObjects.style.display = 'none';
-            sceneDesc.style.display = 'none';
-            hint.style.display = 'none';
+            document.getElementById('scene-3d').style.display = 'none';
+            const overlay = document.getElementById('ending-overlay');
+            const content = document.getElementById('ending-content');
+            const title = document.getElementById('ending-title');
+            const text = document.getElementById('ending-text');
 
-            // Change background
-            backgroundImage.src = 'window pov.jpg';
-
-            // Show ending
-            setTimeout(() => {
-                endingOverlay.style.display = 'flex';
-                endingTitle.innerHTML = '∞ ENDING C: DRIVE INTO VOID';
-                endingTitle.style.color = '#9900ff';
-                endingText.innerHTML = `
-                    You get back in your car and accelerate.<br><br>
-                    Rain becomes neon streaks. Road stretches like an endless ribbon. Buildings dissolve into digital dust.<br><br>
-                    You pass the city limits and keep going into star-colored darkness.<br><br>
-                    <span style="color: #9900ff; font-weight: bold;">NO WORLD LOADED</span><br><br>
-                    <span style="color: #666; font-style: italic;">You escaped — into infinite, unrendered space.</span>
-                `;
-            }, 1000);
+            overlay.style.display = 'flex';
+            content.style.borderColor = '#9900ff';
+            content.style.color = '#9900ff';
+            title.innerHTML = '∞ ENDING C: DRIVE INTO VOID';
+            title.style.color = '#9900ff';
+            title.style.textShadow = '0 0 30px #9900ff, 0 0 60px #9900ff';
+            text.innerHTML = `
+                You get back in your car and accelerate.<br><br>
+                Rain becomes neon streaks. Road stretches like an endless ribbon. Buildings dissolve into digital dust.<br><br>
+                You pass the city limits and keep going into star-colored darkness.<br><br>
+                <span style="color: #9900ff; font-weight: bold; font-size: 1.2em;">NO WORLD LOADED</span><br><br>
+                <span style="color: #666; font-style: italic;">You escaped — into infinite, unrendered space.</span>
+            `;
         }
 
         function restart() {
-            // Reset everything
-            backgroundImage.src = 'looped.png';
-            backgroundImage.style.filter = 'brightness(0.6) contrast(1.2)';
-            interactiveObjects.style.display = 'block';
-            sceneDesc.style.display = 'block';
-            hint.style.display = 'block';
-            endingOverlay.style.display = 'none';
+            document.getElementById('scene-3d').style.display = 'block';
+            document.getElementById('ending-overlay').style.display = 'none';
         }
     </script>
 </body>
