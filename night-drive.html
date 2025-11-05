@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Drive: The Glitch in Reality</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #f4ebd9;
+            font-family: 'Georgia', serif;
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(26, 26, 46, 0.7);
+            padding: 50px;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(244, 235, 217, 0.1);
+        }
+
+        h1 {
+            color: #e8c4a3;
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(232, 196, 163, 0.3);
+        }
+
+        .scene {
+            margin-bottom: 40px;
+            font-size: 1.1em;
+            text-align: justify;
+            color: #d4c5b0;
+        }
+
+        .choices {
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        .choice-btn {
+            display: inline-block;
+            margin: 10px 15px;
+            padding: 15px 40px;
+            background: rgba(232, 196, 163, 0.15);
+            border: 2px solid #e8c4a3;
+            color: #e8c4a3;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            font-family: 'Georgia', serif;
+        }
+
+        .choice-btn:hover {
+            background: rgba(232, 196, 163, 0.25);
+            box-shadow: 0 0 25px rgba(232, 196, 163, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .outcome {
+            display: none;
+            margin-top: 40px;
+            padding: 30px;
+            background: rgba(15, 52, 96, 0.3);
+            border-left: 4px solid #e8c4a3;
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #d4c5b0;
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .outcome-title {
+            color: #e8c4a3;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .reset-btn {
+            display: none;
+            margin: 30px auto;
+            padding: 12px 30px;
+            background: transparent;
+            border: 1px solid #e8c4a3;
+            color: #e8c4a3;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 0.95em;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(232, 196, 163, 0.1);
+        }
+
+        .time {
+            text-align: center;
+            color: #e8c4a3;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px rgba(232, 196, 163, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Night Drive: The Glitch in Reality</h1>
+
+        <div class="time">2:17 AM</div>
+
+        <div class="scene" id="scene">
+            It's 2:17 AM on an empty highway. A deer appears in the road — but its body is made of glowing geometric shapes, like a low-poly model glitching. Your headlights pass through it, as if it's not fully real. The radio cuts out. The sky flickers like a broken screen.
+        </div>
+
+        <div class="choices" id="choices">
+            <button class="choice-btn" onclick="showOutcome('A')">A) Brake</button>
+            <button class="choice-btn" onclick="showOutcome('B')">B) Swerve</button>
+        </div>
+
+        <div class="outcome" id="outcomeA">
+            <div class="outcome-title">Outcome A: Brake</div>
+            You press the brake. The car slows, but the deer doesn't move — it just stands there, rotating slowly like a loading icon. When you finally stop, it walks through your windshield without breaking the glass. For a moment you see inside its hollow body: distant stars, or maybe streetlights from a road that doesn't exist. Then it's gone. The radio turns back on, playing a song you wrote in a dream you don't remember having.
+        </div>
+
+        <div class="outcome" id="outcomeB">
+            <div class="outcome-title">Outcome B: Swerve</div>
+            You swerve hard. The deer stays perfectly still as you pass through the space where it should be. In your rearview mirror, you see it standing in the middle of the road — but now there are two of you driving away from it, side by side, in identical cars. One of you waves. You're not sure which one is real. The sky stops flickering. You keep driving, and so does the other you, until one of you turns at an exit that wasn't there before.
+        </div>
+
+        <button class="reset-btn" id="resetBtn" onclick="resetScene()">Start Over</button>
+    </div>
+
+    <script>
+        function showOutcome(choice) {
+            document.getElementById('choices').style.display = 'none';
+            document.getElementById('outcome' + choice).style.display = 'block';
+            document.getElementById('resetBtn').style.display = 'block';
+        }
+
+        function resetScene() {
+            document.getElementById('choices').style.display = 'block';
+            document.getElementById('outcomeA').style.display = 'none';
+            document.getElementById('outcomeB').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
