@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THE NIGHT THAT WON'T END - Looping Street</title>
+    <title>THE NIGHT THAT WON'T END - Interactive</title>
     <style>
         * {
             margin: 0;
@@ -17,15 +17,13 @@
             color: #00ffff;
             overflow: hidden;
             height: 100vh;
+            cursor: crosshair;
         }
 
         #game-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         #background-image {
@@ -36,168 +34,187 @@
             height: 100%;
             object-fit: cover;
             z-index: 0;
-            filter: brightness(0.7) contrast(1.2);
-            animation: chromatic-glitch 4s infinite;
+            filter: brightness(0.6) contrast(1.2);
+            transition: filter 0.5s;
         }
 
-        @keyframes chromatic-glitch {
-            0%, 100% {
-                filter: brightness(0.7) contrast(1.2);
-            }
-            25% {
-                filter: brightness(0.7) contrast(1.2) hue-rotate(2deg);
-            }
-            50% {
-                filter: brightness(0.7) contrast(1.2);
-            }
-            75% {
-                filter: brightness(0.7) contrast(1.2) hue-rotate(-2deg);
-            }
-        }
-
-        #ui-overlay {
-            position: relative;
-            z-index: 10;
-            width: 90%;
-            max-width: 1200px;
-            padding: 40px;
-            background: rgba(0, 0, 20, 0.85);
-            border: 2px solid #00ffff;
-            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-        }
-
-        .glitch-text {
-            animation: text-glitch 3s infinite;
-        }
-
-        @keyframes text-glitch {
-            0%, 98%, 100% {
-                text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-            }
-            99% {
-                text-shadow: 2px 0 5px #ff00ff, -2px 0 5px #00ffff;
-                transform: translate(2px, 0);
-            }
-        }
-
-        h1 {
-            font-size: 2.5em;
-            color: #ff00ff;
+        .hud-top {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
             text-align: center;
-            margin-bottom: 20px;
+        }
+
+        .hud-title {
+            font-size: 2em;
+            color: #ff00ff;
             text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
             letter-spacing: 4px;
+            animation: text-glitch 3s infinite;
         }
 
         .hud-warning {
             color: #ff0066;
             font-size: 0.9em;
-            text-align: center;
-            margin-bottom: 20px;
+            margin-top: 10px;
             text-shadow: 0 0 10px #ff0066;
             animation: pulse 2s infinite;
         }
 
+        @keyframes text-glitch {
+            0%, 98%, 100% {
+                text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            }
+            99% {
+                text-shadow: 2px 0 10px #ff00ff, -2px 0 10px #00ffff;
+            }
+        }
+
         @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .scene-description {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 900px;
+            padding: 20px 30px;
+            background: rgba(0, 0, 30, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            text-shadow: 0 0 5px #00ffff;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Interactive Objects Container */
+        #interactive-objects {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+        }
+
+        .interactive-object {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.3s, filter 0.3s;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8));
+        }
+
+        .interactive-object:hover {
+            transform: scale(1.15);
+            filter: drop-shadow(0 0 30px rgba(255, 0, 255, 1));
+            animation: object-glow 1s infinite;
+        }
+
+        @keyframes object-glow {
             0%, 100% {
-                opacity: 1;
+                filter: drop-shadow(0 0 30px rgba(255, 0, 255, 1));
             }
             50% {
-                opacity: 0.5;
+                filter: drop-shadow(0 0 50px rgba(0, 255, 255, 1));
             }
         }
 
-        #scene-description {
-            font-size: 1.2em;
-            line-height: 1.8;
-            margin-bottom: 30px;
-            color: #ffffff;
-            text-shadow: 0 0 5px #00ffff;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            border-left: 4px solid #00ffff;
+        /* Person Silhouette */
+        #person-object {
+            top: 35%;
+            left: 20%;
         }
 
-        #choices {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        /* Spray Can */
+        #spray-can-object {
+            bottom: 25%;
+            right: 25%;
         }
 
-        .choice-button {
-            background: linear-gradient(135deg, rgba(0, 100, 255, 0.2), rgba(255, 0, 255, 0.2));
-            border: 2px solid #00ffff;
+        /* Steering Wheel */
+        #wheel-object {
+            top: 45%;
+            right: 15%;
+        }
+
+        .object-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8em;
             color: #00ffff;
-            padding: 20px 30px;
-            font-size: 1.1em;
-            font-family: 'Courier New', monospace;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-            position: relative;
-            overflow: hidden;
+            text-shadow: 0 0 10px #00ffff;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
         }
 
-        .choice-button::before {
-            content: '▸ ';
-            color: #ff00ff;
-            font-weight: bold;
-            margin-right: 10px;
+        .interactive-object:hover .object-label {
+            opacity: 1;
         }
 
-        .choice-button:hover {
-            background: linear-gradient(135deg, rgba(0, 150, 255, 0.4), rgba(255, 0, 255, 0.4));
-            border-color: #ff00ff;
-            color: #ffffff;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 20px rgba(255, 0, 255, 0.3);
-            transform: translateX(10px);
-        }
-
-        .choice-button:active {
-            transform: translateX(5px) scale(0.98);
-        }
-
-        .ending-text {
-            font-size: 1.3em;
-            line-height: 2;
-            color: #ffffff;
-            text-shadow: 0 0 10px #ff00ff;
-            animation: fade-in 2s ease-in;
+        /* Ending Overlay */
+        .ending-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fade-in 1s;
         }
 
         @keyframes fade-in {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .ending-content {
+            width: 80%;
+            max-width: 800px;
+            padding: 40px;
+            background: rgba(0, 0, 50, 0.95);
+            border: 3px solid #ff0066;
+            box-shadow: 0 0 50px rgba(255, 0, 102, 0.8);
+            text-align: center;
         }
 
         .ending-title {
-            font-size: 2em;
+            font-size: 2.5em;
             color: #ff0066;
-            text-align: center;
-            margin: 20px 0;
-            text-shadow: 0 0 30px #ff0066, 0 0 50px #ff0066;
-            animation: ending-pulse 3s infinite;
+            text-shadow: 0 0 30px #ff0066;
+            margin-bottom: 30px;
+            animation: ending-pulse 2s infinite;
         }
 
         @keyframes ending-pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .ending-text {
+            font-size: 1.2em;
+            line-height: 2;
+            color: #ffffff;
+            text-shadow: 0 0 5px #00ffff;
+            margin-bottom: 30px;
         }
 
         #restart-button {
-            display: none;
-            margin: 30px auto 0;
             padding: 15px 40px;
             background: rgba(255, 0, 102, 0.3);
             border: 2px solid #ff0066;
@@ -205,15 +222,17 @@
             font-size: 1.1em;
             font-family: 'Courier New', monospace;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            text-shadow: 0 0 10px #ff0066;
         }
 
         #restart-button:hover {
             background: rgba(255, 0, 102, 0.6);
-            box-shadow: 0 0 20px #ff0066;
+            box-shadow: 0 0 30px #ff0066;
             transform: scale(1.1);
         }
 
+        /* Scanlines */
         .scanlines {
             position: fixed;
             top: 0;
@@ -228,176 +247,266 @@
                 rgba(0, 0, 0, 0.1) 3px
             );
             pointer-events: none;
-            z-index: 100;
+            z-index: 300;
         }
 
-        .lens-flare {
+        .hint-text {
             position: absolute;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0, 255, 255, 0.3), transparent);
-            pointer-events: none;
-            z-index: 5;
-            animation: flare-move 10s infinite;
-        }
-
-        @keyframes flare-move {
-            0%, 100% {
-                top: 20%;
-                right: 10%;
-            }
-            50% {
-                top: 60%;
-                right: 70%;
-            }
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff00ff;
+            font-size: 0.9em;
+            text-shadow: 0 0 10px #ff00ff;
+            animation: pulse 2s infinite;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
     <div class="scanlines"></div>
+
     <div id="game-container">
         <img id="background-image" src="looped.png" alt="Cyberpunk Night">
-        <div class="lens-flare"></div>
 
-        <div id="ui-overlay">
-            <h1 class="glitch-text">SCENARIO 10</h1>
+        <div class="hud-top">
+            <div class="hud-title">SCENARIO 10</div>
             <div class="hud-warning">◆ TEMPORAL SYNC ERROR / 01 ◆</div>
+        </div>
 
-            <div id="scene-title" style="text-align: center; font-size: 1.8em; color: #00ffff; margin-bottom: 20px;">
-                THE LOOPING STREET
+        <div id="scene-desc" class="scene-description">
+            <strong style="color: #ff00ff;">THE LOOPING STREET</strong><br>
+            Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.<br>
+            <span style="color: #00ffff;">You are the only thing in sharp focus.</span>
+        </div>
+
+        <div class="hint-text" id="hint">
+            ↑ CLICK ON OBJECTS TO INTERACT ↑
+        </div>
+
+        <!-- Interactive Objects -->
+        <div id="interactive-objects">
+            <!-- Person Silhouette -->
+            <div id="person-object" class="interactive-object" onclick="choiceA()">
+                <svg width="100" height="150" viewBox="0 0 100 150">
+                    <defs>
+                        <filter id="glow-person">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <!-- Person silhouette -->
+                    <ellipse cx="50" cy="25" rx="20" ry="25" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <rect x="30" y="50" width="40" height="60" rx="10" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <rect x="25" y="60" width="15" height="50" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <rect x="60" y="60" width="15" height="50" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <rect x="35" y="110" width="15" height="35" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <rect x="50" y="110" width="15" height="35" rx="5" fill="#00ffff" opacity="0.8" filter="url(#glow-person)"/>
+                    <!-- Glitch effect -->
+                    <circle cx="40" cy="20" r="3" fill="#ff00ff" opacity="0.6">
+                        <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="60" cy="22" r="3" fill="#ff00ff" opacity="0.6">
+                        <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
+                <div class="object-label">TALK TO PERSON</div>
             </div>
 
-            <div id="scene-description">
-                Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.
-                <br><br>
-                You are the only thing in sharp focus. Everything else looks like motion-blur long-exposure photography.
+            <!-- Spray Can -->
+            <div id="spray-can-object" class="interactive-object" onclick="choiceB()">
+                <svg width="80" height="120" viewBox="0 0 80 120">
+                    <defs>
+                        <filter id="glow-spray">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                        <linearGradient id="canGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0099ff;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <!-- Spray cap -->
+                    <rect x="25" y="10" width="30" height="15" rx="3" fill="#ff00ff" filter="url(#glow-spray)"/>
+                    <rect x="30" y="5" width="20" height="10" rx="2" fill="#ff00ff" filter="url(#glow-spray)"/>
+                    <!-- Can body -->
+                    <rect x="20" y="25" width="40" height="70" rx="5" fill="url(#canGradient)" filter="url(#glow-spray)"/>
+                    <!-- Can bottom -->
+                    <ellipse cx="40" cy="95" rx="20" ry="8" fill="#0066ff" filter="url(#glow-spray)"/>
+                    <!-- Label -->
+                    <rect x="25" y="45" width="30" height="20" rx="2" fill="#000" opacity="0.3"/>
+                    <text x="40" y="60" text-anchor="middle" font-size="10" fill="#00ffff" font-family="monospace">NEO</text>
+                    <!-- Spray particles -->
+                    <circle cx="40" cy="8" r="2" fill="#00ffff" opacity="0.8">
+                        <animate attributeName="cy" from="8" to="-10" dur="0.8s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" from="0.8" to="0" dur="0.8s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="35" cy="10" r="1.5" fill="#00ffff" opacity="0.6">
+                        <animate attributeName="cy" from="10" to="-5" dur="1s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" from="0.6" to="0" dur="1s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="45" cy="9" r="1.5" fill="#00ffff" opacity="0.6">
+                        <animate attributeName="cy" from="9" to="-8" dur="0.9s" repeatCount="indefinite"/>
+                        <animate attributeName="opacity" from="0.6" to="0" dur="0.9s" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
+                <div class="object-label">SPRAY GRAFFITI</div>
             </div>
 
-            <div id="choices">
-                <button class="choice-button" onclick="choiceA()">
-                    Talk to a repeating person
-                </button>
-                <button class="choice-button" onclick="choiceB()">
-                    Spray graffiti on a wall
-                </button>
-                <button class="choice-button" onclick="choiceC()">
-                    Drive straight into the blur
-                </button>
+            <!-- Steering Wheel -->
+            <div id="wheel-object" class="interactive-object" onclick="choiceC()">
+                <svg width="140" height="140" viewBox="0 0 140 140">
+                    <defs>
+                        <filter id="glow-wheel">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                        <radialGradient id="wheelGradient">
+                            <stop offset="0%" style="stop-color:#ff00ff;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#9900ff;stop-opacity:1" />
+                        </radialGradient>
+                    </defs>
+                    <!-- Outer wheel -->
+                    <circle cx="70" cy="70" r="60" fill="none" stroke="url(#wheelGradient)" stroke-width="8" filter="url(#glow-wheel)"/>
+                    <!-- Inner circle -->
+                    <circle cx="70" cy="70" r="20" fill="url(#wheelGradient)" filter="url(#glow-wheel)"/>
+                    <!-- Spokes -->
+                    <line x1="70" y1="50" x2="70" y2="20" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
+                    <line x1="70" y1="90" x2="70" y2="120" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
+                    <line x1="50" y1="70" x2="20" y2="70" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
+                    <line x1="90" y1="70" x2="120" y2="70" stroke="#ff00ff" stroke-width="4" filter="url(#glow-wheel)"/>
+                    <!-- Center logo -->
+                    <circle cx="70" cy="70" r="8" fill="#00ffff" filter="url(#glow-wheel)">
+                        <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/>
+                    </circle>
+                    <!-- Speed lines effect -->
+                    <g opacity="0.4">
+                        <path d="M 130 70 L 145 70" stroke="#00ffff" stroke-width="2">
+                            <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite"/>
+                        </path>
+                        <path d="M 130 65 L 145 65" stroke="#00ffff" stroke-width="2">
+                            <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
+                        </path>
+                        <path d="M 130 75 L 145 75" stroke="#00ffff" stroke-width="2">
+                            <animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite"/>
+                        </path>
+                    </g>
+                </svg>
+                <div class="object-label">DRIVE INTO BLUR</div>
             </div>
+        </div>
 
-            <button id="restart-button" onclick="restart()">⟲ RESTART SIMULATION</button>
+        <!-- Ending Overlay -->
+        <div id="ending-overlay" class="ending-overlay">
+            <div class="ending-content">
+                <div id="ending-title" class="ending-title"></div>
+                <div id="ending-text" class="ending-text"></div>
+                <button id="restart-button" onclick="restart()">⟲ RESTART SIMULATION</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const sceneTitle = document.getElementById('scene-title');
-        const sceneDescription = document.getElementById('scene-description');
-        const choicesDiv = document.getElementById('choices');
-        const restartButton = document.getElementById('restart-button');
         const backgroundImage = document.getElementById('background-image');
+        const interactiveObjects = document.getElementById('interactive-objects');
+        const endingOverlay = document.getElementById('ending-overlay');
+        const endingTitle = document.getElementById('ending-title');
+        const endingText = document.getElementById('ending-text');
+        const sceneDesc = document.getElementById('scene-desc');
+        const hint = document.getElementById('hint');
 
         function choiceA() {
+            // Hide interactive objects
+            interactiveObjects.style.display = 'none';
+            sceneDesc.style.display = 'none';
+            hint.style.display = 'none';
+
+            // Change background
             backgroundImage.src = 'person pov.jpg';
-            sceneTitle.innerHTML = '⚠ ENDING A: FADE OUT';
-            sceneTitle.className = 'ending-title';
 
-            sceneDescription.innerHTML = `
-                <div class="ending-text">
-                    You approach a man who keeps dropping his umbrella.
-                    <br><br>
-                    You say hello. He freezes mid-motion. His eyes blink out of sync, like two video layers trying to align.
-                    <br><br>
-                    Then your arm twitches. Your foot steps backward on its own.
-                    <br><br>
-                    You drop your keys. Pick them up. Drop them. Pick them up.
-                    <br><br>
-                    <span style="color: #ff0066; font-weight: bold;">Looping. Glitched.</span>
-                    <br><br>
+            // Show ending
+            setTimeout(() => {
+                endingOverlay.style.display = 'flex';
+                endingTitle.innerHTML = '⚠ ENDING A: FADE OUT';
+                endingTitle.style.color = '#ff0066';
+                endingText.innerHTML = `
+                    You approach a man who keeps dropping his umbrella.<br><br>
+                    You say hello. He freezes mid-motion. His eyes blink out of sync, like two video layers trying to align.<br><br>
+                    Then your arm twitches. Your foot steps backward on its own.<br><br>
+                    You drop your keys. Pick them up. Drop them. Pick them up.<br><br>
+                    <span style="color: #ff0066; font-weight: bold;">Looping. Glitched.</span><br><br>
                     <span style="color: #666; font-style: italic;">You join the cycle. Street keeps looping. Nobody knows you ever stopped.</span>
-                </div>
-            `;
-
-            choicesDiv.style.display = 'none';
-            restartButton.style.display = 'block';
+                `;
+            }, 1000);
         }
 
         function choiceB() {
+            // Hide interactive objects
+            interactiveObjects.style.display = 'none';
+            sceneDesc.style.display = 'none';
+            hint.style.display = 'none';
+
+            // Keep background
             backgroundImage.src = 'looped.png';
-            sceneTitle.innerHTML = '✓ ENDING B: RETURN CHANGED';
-            sceneTitle.className = 'ending-title';
-            sceneTitle.style.color = '#00ff00';
+            backgroundImage.style.filter = 'brightness(0.8) saturate(1.5) hue-rotate(10deg)';
 
-            sceneDescription.innerHTML = `
-                <div class="ending-text">
-                    You paint graffiti on a brick wall — bright electric blue.
-                    <br><br>
-                    The world resets. Pedestrians rewind. Cars jump back to frame one.
-                    <br><br>
-                    But the graffiti stays. It glows.
-                    <br><br>
-                    Reality flickers like a broken game engine. Then—everything snaps back to normal daylight.
-                    <br><br>
-                    <span style="color: #00ff00; font-weight: bold;">Except the graffiti. Still glowing.</span>
-                    <br><br>
+            // Show ending
+            setTimeout(() => {
+                endingOverlay.style.display = 'flex';
+                endingTitle.innerHTML = '✓ ENDING B: RETURN CHANGED';
+                endingTitle.style.color = '#00ff00';
+                endingText.innerHTML = `
+                    You paint graffiti on a brick wall — bright electric blue.<br><br>
+                    The world resets. Pedestrians rewind. Cars jump back to frame one.<br><br>
+                    But the graffiti stays. It glows.<br><br>
+                    Reality flickers like a broken game engine. Then—everything snaps back to normal daylight.<br><br>
+                    <span style="color: #00ff00; font-weight: bold;">Except the graffiti. Still glowing.</span><br><br>
                     <span style="color: #00ffff; font-style: italic;">You escaped the loop, but something in the world has been rewritten.</span>
-                </div>
-            `;
-
-            choicesDiv.style.display = 'none';
-            restartButton.style.display = 'block';
+                `;
+            }, 1000);
         }
 
         function choiceC() {
+            // Hide interactive objects
+            interactiveObjects.style.display = 'none';
+            sceneDesc.style.display = 'none';
+            hint.style.display = 'none';
+
+            // Change background
             backgroundImage.src = 'window pov.jpg';
-            sceneTitle.innerHTML = '∞ ENDING C: DRIVE INTO VOID';
-            sceneTitle.className = 'ending-title';
-            sceneTitle.style.color = '#9900ff';
 
-            sceneDescription.innerHTML = `
-                <div class="ending-text">
-                    You get back in your car and accelerate.
-                    <br><br>
-                    Rain becomes neon streaks. Road stretches like an endless ribbon. Buildings dissolve into digital dust.
-                    <br><br>
-                    You pass the city limits and keep going into star-colored darkness.
-                    <br><br>
-                    <span style="color: #9900ff; font-weight: bold;">NO WORLD LOADED</span>
-                    <br><br>
+            // Show ending
+            setTimeout(() => {
+                endingOverlay.style.display = 'flex';
+                endingTitle.innerHTML = '∞ ENDING C: DRIVE INTO VOID';
+                endingTitle.style.color = '#9900ff';
+                endingText.innerHTML = `
+                    You get back in your car and accelerate.<br><br>
+                    Rain becomes neon streaks. Road stretches like an endless ribbon. Buildings dissolve into digital dust.<br><br>
+                    You pass the city limits and keep going into star-colored darkness.<br><br>
+                    <span style="color: #9900ff; font-weight: bold;">NO WORLD LOADED</span><br><br>
                     <span style="color: #666; font-style: italic;">You escaped — into infinite, unrendered space.</span>
-                </div>
-            `;
-
-            choicesDiv.style.display = 'none';
-            restartButton.style.display = 'block';
+                `;
+            }, 1000);
         }
 
         function restart() {
+            // Reset everything
             backgroundImage.src = 'looped.png';
-            sceneTitle.innerHTML = 'THE LOOPING STREET';
-            sceneTitle.className = '';
-            sceneTitle.style.color = '#00ffff';
-
-            sceneDescription.innerHTML = `
-                Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.
-                <br><br>
-                You are the only thing in sharp focus. Everything else looks like motion-blur long-exposure photography.
-            `;
-
-            choicesDiv.innerHTML = `
-                <button class="choice-button" onclick="choiceA()">
-                    Talk to a repeating person
-                </button>
-                <button class="choice-button" onclick="choiceB()">
-                    Spray graffiti on a wall
-                </button>
-                <button class="choice-button" onclick="choiceC()">
-                    Drive straight into the blur
-                </button>
-            `;
-
-            choicesDiv.style.display = 'flex';
-            restartButton.style.display = 'none';
+            backgroundImage.style.filter = 'brightness(0.6) contrast(1.2)';
+            interactiveObjects.style.display = 'block';
+            sceneDesc.style.display = 'block';
+            hint.style.display = 'block';
+            endingOverlay.style.display = 'none';
         }
     </script>
 </body>
