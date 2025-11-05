@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON CHASE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Scene Container -->
+    <div id="game-container">
+
+        <!-- Intro Scene: Bar -->
+        <div id="scene-bar" class="scene active">
+            <div class="scene-layers">
+                <!-- 3D Background Layers -->
+                <div class="layer layer-far" style="background-image: url('cafe.png')"></div>
+                <div class="layer layer-mid neon-overlay"></div>
+
+                <!-- Floating Elements -->
+                <div class="floating-bottles">
+                    <div class="bottle" style="--x: 20%; --y: 30%; --delay: 0s;"></div>
+                    <div class="bottle" style="--x: 60%; --y: 50%; --delay: 0.5s;"></div>
+                    <div class="bottle" style="--x: 80%; --y: 40%; --delay: 1s;"></div>
+                </div>
+
+                <!-- Police Drones -->
+                <div class="drones">
+                    <div class="drone" style="--start-x: -10%; --end-x: 110%; --delay: 0s;"></div>
+                    <div class="drone" style="--start-x: 110%; --end-x: -10%; --delay: 2s;"></div>
+                </div>
+
+                <!-- Glitch Effects -->
+                <div class="glitch-overlay"></div>
+            </div>
+
+            <!-- Minimal Text -->
+            <div class="scene-text">
+                <h1 class="neon-title">NEON CHASE</h1>
+                <p class="subtitle">/// CHAOS IN THE BAR ///</p>
+            </div>
+
+            <!-- Start Button -->
+            <button class="start-btn pulse-neon" onclick="startChase()">
+                <span class="btn-icon">⚡</span>
+                RIDE
+            </button>
+        </div>
+
+        <!-- Chase Scene: Motorcycle POV -->
+        <div id="scene-chase" class="scene">
+            <div class="motorcycle-pov">
+                <!-- Motion Blur Background -->
+                <div class="motion-blur-bg layer-far"></div>
+                <div class="motion-blur-bg layer-mid"></div>
+                <div class="motion-blur-bg layer-near"></div>
+
+                <!-- 3D City Elements -->
+                <div class="city-elements">
+                    <div class="building-layer left"></div>
+                    <div class="building-layer right"></div>
+                </div>
+
+                <!-- Speed Lines -->
+                <div class="speed-lines">
+                    <div class="line" style="--pos: 10%;"></div>
+                    <div class="line" style="--pos: 30%;"></div>
+                    <div class="line" style="--pos: 50%;"></div>
+                    <div class="line" style="--pos: 70%;"></div>
+                    <div class="line" style="--pos: 90%;"></div>
+                </div>
+
+                <!-- Motorcycle Dashboard (bottom view) -->
+                <div class="dashboard">
+                    <div class="handlebar left"></div>
+                    <div class="handlebar right"></div>
+                    <div class="speedometer">
+                        <div class="speed-value">248</div>
+                        <div class="speed-label">KM/H</div>
+                    </div>
+                </div>
+
+                <!-- Chase Elements -->
+                <div class="chase-drones">
+                    <div class="chase-drone" style="--pos: 20%;"></div>
+                    <div class="chase-drone" style="--pos: 50%;"></div>
+                    <div class="chase-drone" style="--pos: 80%;"></div>
+                </div>
+
+                <!-- Warning Text -->
+                <div class="warning-text flicker">
+                    DETECTED /// CHOOSE PATH
+                </div>
+            </div>
+
+            <!-- Choice System (Visual Icons) -->
+            <div class="choices">
+                <div class="choice" onclick="chooseEnding('blend')" data-hint="BLEND">
+                    <div class="choice-icon crowd-icon">
+                        <div class="icon-visual">
+                            <span class="icon-sym">👥</span>
+                            <div class="icon-glow"></div>
+                        </div>
+                    </div>
+                    <div class="choice-label">DISAPPEAR</div>
+                </div>
+
+                <div class="choice" onclick="chooseEnding('run')" data-hint="RUN">
+                    <div class="choice-icon speed-icon">
+                        <div class="icon-visual">
+                            <span class="icon-sym">⚡</span>
+                            <div class="icon-glow"></div>
+                        </div>
+                    </div>
+                    <div class="choice-label">ACCELERATE</div>
+                </div>
+
+                <div class="choice" onclick="chooseEnding('hack')" data-hint="HACK">
+                    <div class="choice-icon hack-icon">
+                        <div class="icon-visual">
+                            <span class="icon-sym">◈</span>
+                            <div class="icon-glow"></div>
+                        </div>
+                    </div>
+                    <div class="choice-label">MERGE</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ending A: Return Changed -->
+        <div id="ending-blend" class="scene ending">
+            <div class="ending-visual">
+                <div class="layer layer-far distorted" style="background-image: url('cafe.png')"></div>
+                <div class="color-shift-overlay"></div>
+                <div class="pixel-crowd"></div>
+
+                <div class="ending-text fade-in">
+                    <h2 class="ending-title glitch-text">RETURN CHANGED</h2>
+                    <p class="ending-desc">The drones pass you by<br>
+                    But the city will never look the same</p>
+                </div>
+            </div>
+            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
+        </div>
+
+        <!-- Ending B: Drive Into Void -->
+        <div id="ending-run" class="scene ending">
+            <div class="ending-visual">
+                <div class="infinite-tunnel"></div>
+                <div class="light-burst"></div>
+                <div class="motorcycle-silhouette"></div>
+
+                <div class="ending-text fade-in">
+                    <h2 class="ending-title neon-pulse">DRIVE INTO VOID</h2>
+                    <p class="ending-desc">You burst into infinite light<br>
+                    Speed becomes existence</p>
+                </div>
+            </div>
+            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
+        </div>
+
+        <!-- Ending C: Become the Glitch -->
+        <div id="ending-hack" class="scene ending">
+            <div class="ending-visual">
+                <div class="pixelation-effect"></div>
+                <div class="digital-merge">
+                    <div class="code-rain"></div>
+                    <div class="circuit-pattern"></div>
+                </div>
+
+                <div class="ending-text fade-in">
+                    <h2 class="ending-title digital-glitch">BECOME THE GLITCH</h2>
+                    <p class="ending-desc">You don't escape<br>
+                    You merge with the neon system</p>
+                </div>
+            </div>
+            <button class="restart-btn" onclick="restart()">⟲ AGAIN</button>
+        </div>
+
+    </div>
+
+    <!-- Audio (optional) -->
+    <audio id="ambient-sound" loop>
+        <source src="ambient.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
