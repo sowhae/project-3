@@ -230,8 +230,14 @@
     <!-- Scene 2: Choice moment -->
     <div class="scene" id="scene2">
         <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <radialGradient id="warmGlow2" cx="50%" cy="40%">
+                    <stop offset="0%" style="stop-color:#f4e4c1;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#3d2817;stop-opacity:1" />
+                </radialGradient>
+            </defs>
             <!-- Same warm background -->
-            <rect width="1920" height="1080" fill="url(#warmGlow)"/>
+            <rect width="1920" height="1080" fill="url(#warmGlow2)"/>
 
             <!-- Closer view of table -->
             <ellipse cx="960" cy="850" rx="900" ry="200" fill="#5a4839" opacity="0.9"/>
@@ -296,10 +302,19 @@
     <!-- Ending A: Healing -->
     <div class="scene" id="endingA">
         <svg width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <filter id="softGlowA">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
             <rect width="1920" height="1080" fill="#f4e4c1"/>
 
             <!-- Warm golden glow -->
-            <circle cx="960" cy="400" r="400" fill="#ffd89a" opacity="0.3" filter="url(#softGlow)"/>
+            <circle cx="960" cy="400" r="400" fill="#ffd89a" opacity="0.3" filter="url(#softGlowA)"/>
 
             <!-- Memory fragments floating -->
             <g opacity="0.6">
@@ -434,6 +449,13 @@
                     <stop offset="50%" style="stop-color:#6a8c9e;stop-opacity:1" />
                     <stop offset="100%" style="stop-color:#b4d4e4;stop-opacity:1" />
                 </linearGradient>
+                <filter id="softGlowC">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
             </defs>
             <rect width="1920" height="1080" fill="url(#transitionGrad)"/>
 
@@ -444,7 +466,7 @@
                 <rect x="15" y="15" width="370" height="670" fill="#8ac4d4" opacity="0.6" rx="5"/>
 
                 <!-- Bright light through door -->
-                <ellipse cx="200" cy="350" rx="150" ry="250" fill="#ffffff" opacity="0.9" filter="url(#softGlow)"/>
+                <ellipse cx="200" cy="350" rx="150" ry="250" fill="#ffffff" opacity="0.9" filter="url(#softGlowC)"/>
 
                 <!-- Silhouette of outside (trees, sky) -->
                 <path d="M 50 450 Q 50 350 120 300 L 120 670 L 50 670 Z" fill="#4a7a8a" opacity="0.3"/>
@@ -498,17 +520,17 @@
         }
 
         function chooseHealing() {
-            transitionTo('A');
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
             document.getElementById('endingA').classList.add('active');
         }
 
         function chooseUsual() {
-            transitionTo('B');
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
             document.getElementById('endingB').classList.add('active');
         }
 
         function chooseDump() {
-            transitionTo('C');
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
             document.getElementById('endingC').classList.add('active');
         }
 
