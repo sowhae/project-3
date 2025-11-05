@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE NIGHT THAT WON'T END - Looping Street</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            filter: brightness(0.7) contrast(1.2);
+            animation: chromatic-glitch 4s infinite;
+        }
+
+        @keyframes chromatic-glitch {
+            0%, 100% {
+                filter: brightness(0.7) contrast(1.2);
+            }
+            25% {
+                filter: brightness(0.7) contrast(1.2) hue-rotate(2deg);
+            }
+            50% {
+                filter: brightness(0.7) contrast(1.2);
+            }
+            75% {
+                filter: brightness(0.7) contrast(1.2) hue-rotate(-2deg);
+            }
+        }
+
+        #ui-overlay {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 1200px;
+            padding: 40px;
+            background: rgba(0, 0, 20, 0.85);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .glitch-text {
+            animation: text-glitch 3s infinite;
+        }
+
+        @keyframes text-glitch {
+            0%, 98%, 100% {
+                text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            }
+            99% {
+                text-shadow: 2px 0 5px #ff00ff, -2px 0 5px #00ffff;
+                transform: translate(2px, 0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #ff00ff;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            letter-spacing: 4px;
+        }
+
+        .hud-warning {
+            color: #ff0066;
+            font-size: 0.9em;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff0066;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #scene-description {
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #ffffff;
+            text-shadow: 0 0 5px #00ffff;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border-left: 4px solid #00ffff;
+        }
+
+        #choices {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .choice-button {
+            background: linear-gradient(135deg, rgba(0, 100, 255, 0.2), rgba(255, 0, 255, 0.2));
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 20px 30px;
+            font-size: 1.1em;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-button::before {
+            content: '▸ ';
+            color: #ff00ff;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .choice-button:hover {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.4), rgba(255, 0, 255, 0.4));
+            border-color: #ff00ff;
+            color: #ffffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 20px rgba(255, 0, 255, 0.3);
+            transform: translateX(10px);
+        }
+
+        .choice-button:active {
+            transform: translateX(5px) scale(0.98);
+        }
+
+        .ending-text {
+            font-size: 1.3em;
+            line-height: 2;
+            color: #ffffff;
+            text-shadow: 0 0 10px #ff00ff;
+            animation: fade-in 2s ease-in;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ending-title {
+            font-size: 2em;
+            color: #ff0066;
+            text-align: center;
+            margin: 20px 0;
+            text-shadow: 0 0 30px #ff0066, 0 0 50px #ff0066;
+            animation: ending-pulse 3s infinite;
+        }
+
+        @keyframes ending-pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        #restart-button {
+            display: none;
+            margin: 30px auto 0;
+            padding: 15px 40px;
+            background: rgba(255, 0, 102, 0.3);
+            border: 2px solid #ff0066;
+            color: #ffffff;
+            font-size: 1.1em;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #restart-button:hover {
+            background: rgba(255, 0, 102, 0.6);
+            box-shadow: 0 0 20px #ff0066;
+            transform: scale(1.1);
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 0, 0, 0.1) 3px
+            );
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .lens-flare {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.3), transparent);
+            pointer-events: none;
+            z-index: 5;
+            animation: flare-move 10s infinite;
+        }
+
+        @keyframes flare-move {
+            0%, 100% {
+                top: 20%;
+                right: 10%;
+            }
+            50% {
+                top: 60%;
+                right: 70%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div id="game-container">
+        <img id="background-image" src="looped.png" alt="Cyberpunk Night">
+        <div class="lens-flare"></div>
+
+        <div id="ui-overlay">
+            <h1 class="glitch-text">SCENARIO 10</h1>
+            <div class="hud-warning">◆ TEMPORAL SYNC ERROR / 01 ◆</div>
+
+            <div id="scene-title" style="text-align: center; font-size: 1.8em; color: #00ffff; margin-bottom: 20px;">
+                THE LOOPING STREET
+            </div>
+
+            <div id="scene-description">
+                Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.
+                <br><br>
+                You are the only thing in sharp focus. Everything else looks like motion-blur long-exposure photography.
+            </div>
+
+            <div id="choices">
+                <button class="choice-button" onclick="choiceA()">
+                    Talk to a repeating person
+                </button>
+                <button class="choice-button" onclick="choiceB()">
+                    Spray graffiti on a wall
+                </button>
+                <button class="choice-button" onclick="choiceC()">
+                    Drive straight into the blur
+                </button>
+            </div>
+
+            <button id="restart-button" onclick="restart()">⟲ RESTART SIMULATION</button>
+        </div>
+    </div>
+
+    <script>
+        const sceneTitle = document.getElementById('scene-title');
+        const sceneDescription = document.getElementById('scene-description');
+        const choicesDiv = document.getElementById('choices');
+        const restartButton = document.getElementById('restart-button');
+        const backgroundImage = document.getElementById('background-image');
+
+        function choiceA() {
+            backgroundImage.src = 'person pov.jpg';
+            sceneTitle.innerHTML = '⚠ ENDING A: FADE OUT';
+            sceneTitle.className = 'ending-title';
+
+            sceneDescription.innerHTML = `
+                <div class="ending-text">
+                    You approach a man who keeps dropping his umbrella.
+                    <br><br>
+                    You say hello. He freezes mid-motion. His eyes blink out of sync, like two video layers trying to align.
+                    <br><br>
+                    Then your arm twitches. Your foot steps backward on its own.
+                    <br><br>
+                    You drop your keys. Pick them up. Drop them. Pick them up.
+                    <br><br>
+                    <span style="color: #ff0066; font-weight: bold;">Looping. Glitched.</span>
+                    <br><br>
+                    <span style="color: #666; font-style: italic;">You join the cycle. Street keeps looping. Nobody knows you ever stopped.</span>
+                </div>
+            `;
+
+            choicesDiv.style.display = 'none';
+            restartButton.style.display = 'block';
+        }
+
+        function choiceB() {
+            backgroundImage.src = 'looped.png';
+            sceneTitle.innerHTML = '✓ ENDING B: RETURN CHANGED';
+            sceneTitle.className = 'ending-title';
+            sceneTitle.style.color = '#00ff00';
+
+            sceneDescription.innerHTML = `
+                <div class="ending-text">
+                    You paint graffiti on a brick wall — bright electric blue.
+                    <br><br>
+                    The world resets. Pedestrians rewind. Cars jump back to frame one.
+                    <br><br>
+                    But the graffiti stays. It glows.
+                    <br><br>
+                    Reality flickers like a broken game engine. Then—everything snaps back to normal daylight.
+                    <br><br>
+                    <span style="color: #00ff00; font-weight: bold;">Except the graffiti. Still glowing.</span>
+                    <br><br>
+                    <span style="color: #00ffff; font-style: italic;">You escaped the loop, but something in the world has been rewritten.</span>
+                </div>
+            `;
+
+            choicesDiv.style.display = 'none';
+            restartButton.style.display = 'block';
+        }
+
+        function choiceC() {
+            backgroundImage.src = 'window pov.jpg';
+            sceneTitle.innerHTML = '∞ ENDING C: DRIVE INTO VOID';
+            sceneTitle.className = 'ending-title';
+            sceneTitle.style.color = '#9900ff';
+
+            sceneDescription.innerHTML = `
+                <div class="ending-text">
+                    You get back in your car and accelerate.
+                    <br><br>
+                    Rain becomes neon streaks. Road stretches like an endless ribbon. Buildings dissolve into digital dust.
+                    <br><br>
+                    You pass the city limits and keep going into star-colored darkness.
+                    <br><br>
+                    <span style="color: #9900ff; font-weight: bold;">NO WORLD LOADED</span>
+                    <br><br>
+                    <span style="color: #666; font-style: italic;">You escaped — into infinite, unrendered space.</span>
+                </div>
+            `;
+
+            choicesDiv.style.display = 'none';
+            restartButton.style.display = 'block';
+        }
+
+        function restart() {
+            backgroundImage.src = 'looped.png';
+            sceneTitle.innerHTML = 'THE LOOPING STREET';
+            sceneTitle.className = '';
+            sceneTitle.style.color = '#00ffff';
+
+            sceneDescription.innerHTML = `
+                Neon rain falls in slow motion. Cars glide through the intersection on a perfect loop: same path, same timing. Pedestrians repeat the same gestures like corrupted holograms. Digital billboards flicker, stuck on the same three frames.
+                <br><br>
+                You are the only thing in sharp focus. Everything else looks like motion-blur long-exposure photography.
+            `;
+
+            choicesDiv.innerHTML = `
+                <button class="choice-button" onclick="choiceA()">
+                    Talk to a repeating person
+                </button>
+                <button class="choice-button" onclick="choiceB()">
+                    Spray graffiti on a wall
+                </button>
+                <button class="choice-button" onclick="choiceC()">
+                    Drive straight into the blur
+                </button>
+            `;
+
+            choicesDiv.style.display = 'flex';
+            restartButton.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
