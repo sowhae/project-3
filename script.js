@@ -16,6 +16,10 @@ let steerAngle = 0;
 let targetSteerAngle = 0;
 let crossroadsDistance = 0;
 let chosenPath = null; // 'left', 'center', 'right'
+let events = [];
+let helicopter = null;
+let obstacles = [];
+let eventTimer = 0;
 
 // Colors
 const COLORS = {
@@ -37,15 +41,15 @@ function init() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000510, 0.012);
 
-    // Camera (POV)
+    // Camera (POV) - pulled back to see motorcycle
     camera = new THREE.PerspectiveCamera(
         80,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
     );
-    camera.position.set(0, 2, 0);
-    camera.rotation.x = -0.1;
+    camera.position.set(0, 2.5, -1.5); // Pulled back and up
+    camera.rotation.x = -0.05;
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -77,14 +81,135 @@ function init() {
 
 // ===== CREATE 3D MOTORCYCLE (HANDLEBARS POV) =====
 function createMotorcycle() {
-    // Left Handlebar
+    // Motorcycle body materials
+    const bodyMat = new THREE.MeshPhongMaterial({
+        color: 0x0a0a0a,
+        emissive: 0x00ffff,
+        emissiveIntensity: 0.3,
+        shininess: 100
+    });
+
+    const chromeMat = new THREE.MeshPhongMaterial({
+        color: 0x888888,
+        emissive: 0x00ffff,
+        emissiveIntensity: 0.2,
+        shininess: 200
+    });
+
+    // FUEL TANK (bigger, visible in front)
+    const tankGeo = new THREE.BoxGeometry(1.2, 0.6, 1.8);
+    const tank = new THREE.Mesh(tankGeo, bodyMat);
+    tank.position.set(0, 0.3, 1.5);
+    camera.add(tank);
+
+    // Tank logo/stripe (glowing cyan)
+    const stripeGeo = new THREE.PlaneGeometry(0.9, 0.25);
+    const stripeMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.9
+    });
+    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+    stripe.position.set(0, 0.6, 1.5);
+    stripe.rotation.x = -Math.PI / 2;
+    camera.add(stripe);
+
+    // FRONT FENDER (bigger)
+    const fenderGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 16, 1, true);
+    const fender = new THREE.Mesh(fenderGeo, chromeMat);
+    fender.rotation.z = Math.PI / 2;
+    fender.position.set(0, -0.3, 3);
+    camera.add(fender);
+
+    // FRONT WHEEL (bigger, visible, spinning)
+    const wheelGeo = new THREE.TorusGeometry(0.5, 0.2, 16, 32);
+    const wheelMat = new THREE.MeshPhongMaterial({
+        color: 0x1a1a1a,
+        shininess: 50
+    });
+    const frontWheel = new THREE.Mesh(wheelGeo, wheelMat);
+    frontWheel.rotation.y = Math.PI / 2;
+    frontWheel.position.set(0, -0.3, 3.5);
+    camera.add(frontWheel);
+
+    // Wheel rim (glowing cyan)
+    const rimGeo = new THREE.TorusGeometry(0.35, 0.08, 8, 16);
+    const rimMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.8
+    });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.y = Math.PI / 2;
+    rim.position.set(0, -0.3, 3.5);
+    camera.add(rim);
+
+    // Wheel spokes (glowing cyan, bigger)
+    const spokesGroup = new THREE.Group();
+    for (let i = 0; i < 6; i++) {
+        const spokeGeo = new THREE.BoxGeometry(0.04, 0.8, 0.04);
+        const spokeMat = new THREE.MeshBasicMaterial({ color: COLORS.cyan });
+        const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+        spoke.rotation.z = (Math.PI / 3) * i;
+        spokesGroup.add(spoke);
+    }
+    spokesGroup.position.set(0, -0.3, 3.5);
+    spokesGroup.rotation.y = Math.PI / 2;
+    camera.add(spokesGroup);
+
+    motorcycle.spokesGroup = spokesGroup;
+
+    // EXHAUST PIPES (both sides, bigger)
+    const exhaustGeo = new THREE.CylinderGeometry(0.1, 0.12, 1.8, 8);
+    const exhaustMat = new THREE.MeshPhongMaterial({
+        color: 0x222222,
+        emissive: COLORS.orange,
+        emissiveIntensity: 0.5,
+        shininess: 80
+    });
+
+    const exhaustLeft = new THREE.Mesh(exhaustGeo, exhaustMat);
+    exhaustLeft.rotation.z = Math.PI / 2;
+    exhaustLeft.rotation.y = -0.2;
+    exhaustLeft.position.set(-0.7, -0.2, 1);
+    camera.add(exhaustLeft);
+
+    const exhaustRight = exhaustLeft.clone();
+    exhaustRight.rotation.y = 0.2;
+    exhaustRight.position.x = 0.7;
+    camera.add(exhaustRight);
+
+    // Exhaust glow (bigger and brighter)
+    const exhaustGlowGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const exhaustGlowMat = new THREE.MeshBasicMaterial({
+        color: COLORS.orange,
+        transparent: true,
+        opacity: 0.8
+    });
+    const exhaustGlowL = new THREE.Mesh(exhaustGlowGeo, exhaustGlowMat);
+    exhaustGlowL.position.set(-1.6, -0.2, 1);
+    camera.add(exhaustGlowL);
+
+    const exhaustGlowR = exhaustGlowL.clone();
+    exhaustGlowR.position.x = 1.6;
+    camera.add(exhaustGlowR);
+
+    // Exhaust point lights
+    const exhaustLightL = new THREE.PointLight(COLORS.orange, 1, 5);
+    exhaustLightL.position.set(-1.6, -0.2, 1);
+    camera.add(exhaustLightL);
+
+    const exhaustLightR = new THREE.PointLight(COLORS.orange, 1, 5);
+    exhaustLightR.position.set(1.6, -0.2, 1);
+    camera.add(exhaustLightR);
+
+    // HANDLEBARS
     const leftHandlebarGeo = new THREE.BoxGeometry(0.15, 0.6, 0.3);
     const handlebarMat = new THREE.MeshPhongMaterial({
         color: 0x1a1a1a,
         emissive: 0x00ffff,
         emissiveIntensity: 0.4,
-        shininess: 100,
-        metalness: 0.8
+        shininess: 100
     });
     const leftHandlebar = new THREE.Mesh(leftHandlebarGeo, handlebarMat);
     leftHandlebar.position.set(-1.2, 1, 1.5);
@@ -92,7 +217,6 @@ function createMotorcycle() {
     camera.add(leftHandlebar);
     scene.add(camera);
 
-    // Right Handlebar
     const rightHandlebar = leftHandlebar.clone();
     rightHandlebar.position.set(1.2, 1, 1.5);
     rightHandlebar.rotation.z = 0.3;
@@ -163,6 +287,8 @@ function createMotorcycle() {
     motorcycle.rightHandlebar = rightHandlebar;
     motorcycle.leftGrip = leftGrip;
     motorcycle.rightGrip = rightGrip;
+    motorcycle.frontWheel = frontWheel;
+    motorcycle.tank = tank;
 }
 
 // ===== CREATE ENHANCED CYBERPUNK CITY =====
@@ -365,59 +491,107 @@ function createRoad() {
 function createCrossroads() {
     const crossroadsZ = -200;
 
-    // Intersection platform
-    const intersectionGeo = new THREE.PlaneGeometry(40, 40);
+    // Intersection platform (BIGGER)
+    const intersectionGeo = new THREE.PlaneGeometry(60, 60);
     const intersectionMat = new THREE.MeshPhongMaterial({
         color: 0x0a0a15,
         emissive: 0x220044,
-        emissiveIntensity: 0.2
+        emissiveIntensity: 0.3
     });
     const intersection = new THREE.Mesh(intersectionGeo, intersectionMat);
     intersection.rotation.x = -Math.PI / 2;
     intersection.position.set(0, 0, crossroadsZ);
     scene.add(intersection);
 
-    // Left road path
-    const leftRoadGeo = new THREE.PlaneGeometry(12, 60);
-    const leftRoad = new THREE.Mesh(leftRoadGeo, intersectionMat);
+    // LEFT ROAD PATH (cyan)
+    const leftRoadGeo = new THREE.PlaneGeometry(14, 80);
+    const leftRoadMat = new THREE.MeshPhongMaterial({
+        color: 0x0a0a15,
+        emissive: COLORS.cyan,
+        emissiveIntensity: 0.2
+    });
+    const leftRoad = new THREE.Mesh(leftRoadGeo, leftRoadMat);
     leftRoad.rotation.x = -Math.PI / 2;
     leftRoad.rotation.z = -Math.PI / 6; // 30 degrees left
-    leftRoad.position.set(-20, 0, crossroadsZ - 40);
+    leftRoad.position.set(-25, 0.01, crossroadsZ - 50);
     scene.add(leftRoad);
 
-    // Right road path
-    const rightRoad = leftRoad.clone();
+    // RIGHT ROAD PATH (green)
+    const rightRoadMat = new THREE.MeshPhongMaterial({
+        color: 0x0a0a15,
+        emissive: COLORS.green,
+        emissiveIntensity: 0.2
+    });
+    const rightRoad = new THREE.Mesh(new THREE.PlaneGeometry(14, 80), rightRoadMat);
+    rightRoad.rotation.x = -Math.PI / 2;
     rightRoad.rotation.z = Math.PI / 6; // 30 degrees right
-    rightRoad.position.set(20, 0, crossroadsZ - 40);
+    rightRoad.position.set(25, 0.01, crossroadsZ - 50);
     scene.add(rightRoad);
 
-    // Center road (straight)
-    const centerRoad = new THREE.Mesh(new THREE.PlaneGeometry(12, 60), intersectionMat);
+    // CENTER ROAD (magenta - straight)
+    const centerRoadMat = new THREE.MeshPhongMaterial({
+        color: 0x0a0a15,
+        emissive: COLORS.magenta,
+        emissiveIntensity: 0.2
+    });
+    const centerRoad = new THREE.Mesh(new THREE.PlaneGeometry(14, 80), centerRoadMat);
     centerRoad.rotation.x = -Math.PI / 2;
-    centerRoad.position.set(0, 0, crossroadsZ - 50);
+    centerRoad.position.set(0, 0.01, crossroadsZ - 60);
     scene.add(centerRoad);
 
-    // Add arrow signs
-    createArrowSign(-15, crossroadsZ - 10, -Math.PI / 4, COLORS.cyan); // Left
-    createArrowSign(0, crossroadsZ - 10, 0, COLORS.magenta); // Straight
-    createArrowSign(15, crossroadsZ - 10, Math.PI / 4, COLORS.green); // Right
+    // GIANT ARROWS on ground
+    createArrowSign(-20, crossroadsZ + 5, -Math.PI / 4, COLORS.cyan, 3); // Left
+    createArrowSign(0, crossroadsZ + 5, 0, COLORS.magenta, 3); // Straight
+    createArrowSign(20, crossroadsZ + 5, Math.PI / 4, COLORS.green, 3); // Right
+
+    // Barrier walls to block wrong paths
+    const barrierMat = new THREE.MeshPhongMaterial({
+        color: 0xff0000,
+        emissive: COLORS.red,
+        emissiveIntensity: 0.8,
+        transparent: true,
+        opacity: 0.3
+    });
+
+    const leftBarrier = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 20), barrierMat);
+    leftBarrier.position.set(-10, 2, crossroadsZ - 20);
+    leftBarrier.rotation.y = -Math.PI / 6;
+    scene.add(leftBarrier);
+
+    const rightBarrier = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 20), barrierMat);
+    rightBarrier.position.set(10, 2, crossroadsZ - 20);
+    rightBarrier.rotation.y = Math.PI / 6;
+    scene.add(rightBarrier);
 
     return { intersection, leftRoad, centerRoad, rightRoad };
 }
 
-function createArrowSign(x, z, rotation, color) {
-    // Arrow shape using triangles
-    const arrowGeo = new THREE.ConeGeometry(1.5, 3, 3);
+function createArrowSign(x, z, rotation, color, scale = 1.5) {
+    // Arrow shape using cone (bigger)
+    const arrowGeo = new THREE.ConeGeometry(2 * scale, 4 * scale, 4);
     const arrowMat = new THREE.MeshBasicMaterial({ color });
     const arrow = new THREE.Mesh(arrowGeo, arrowMat);
     arrow.rotation.x = -Math.PI / 2;
     arrow.rotation.z = rotation;
-    arrow.position.set(x, 0.5, z);
+    arrow.position.set(x, 1, z);
 
-    // Glow light
-    const light = new THREE.PointLight(color, 3, 10);
-    light.position.set(x, 2, z);
+    // Pulsing glow light
+    const light = new THREE.PointLight(color, 8, 20);
+    light.position.set(x, 3, z);
     scene.add(light);
+
+    // Add outline glow
+    const glowGeo = new THREE.ConeGeometry(2.2 * scale, 4.2 * scale, 4);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.4
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.rotation.x = -Math.PI / 2;
+    glow.rotation.z = rotation;
+    glow.position.set(x, 0.8, z);
+    scene.add(glow);
 
     scene.add(arrow);
 }
@@ -728,13 +902,23 @@ function updateChase() {
         }
     });
 
+    // Wheel rotation (spins based on speed)
+    if (motorcycle.spokesGroup) {
+        motorcycle.spokesGroup.rotation.x += speed * 0.005;
+    }
+
     // Handlebar shake
     const shake = Math.sin(Date.now() * 0.02) * 0.003 * (speed / 250);
     motorcycle.leftHandlebar.rotation.z = -0.3 + shake + steerAngle * 0.05;
     motorcycle.rightHandlebar.rotation.z = 0.3 - shake - steerAngle * 0.05;
 
+    // Tank and bike lean with steering
+    if (motorcycle.tank) {
+        motorcycle.tank.rotation.z = -steerAngle * 0.2;
+    }
+
     // Camera shake
-    camera.position.y = 2 + Math.sin(Date.now() * 0.03) * 0.08 * (speed / 250);
+    camera.position.y = 2.5 + Math.sin(Date.now() * 0.03) * 0.08 * (speed / 250);
 }
 
 function updateEnding() {
