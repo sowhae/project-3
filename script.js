@@ -399,11 +399,23 @@ function updateEnding() {
 
 // ===== GAME FUNCTIONS =====
 function startGame() {
-    document.getElementById('start-screen').classList.add('hidden');
-    document.getElementById('hud').classList.add('active');
+    console.log('startGame() called!');
+
+    const startScreen = document.getElementById('start-screen');
+    const hud = document.getElementById('hud');
+
+    if (!startScreen || !hud) {
+        console.error('Required elements not found!');
+        return;
+    }
+
+    startScreen.classList.add('hidden');
+    hud.classList.add('active');
 
     gameState = 'chase';
     targetSpeed = 250;
+
+    console.log('Game state:', gameState, 'Target speed:', targetSpeed);
 
     // Spawn drones
     setTimeout(() => {
@@ -542,7 +554,26 @@ document.addEventListener('keydown', (e) => {
 
 // ===== START =====
 window.addEventListener('load', () => {
-    init();
-    console.log('🏍️ NEON CHASE 3D LOADED');
-    console.log('Controls: SPACE=start, 1/2/3=choose, R=restart');
+    try {
+        console.log('Starting initialization...');
+
+        // Check if THREE is loaded
+        if (typeof THREE === 'undefined') {
+            console.error('THREE.js not loaded! Check your internet connection.');
+            alert('Failed to load 3D library. Please check your internet connection and refresh.');
+            return;
+        }
+
+        init();
+        console.log('🏍️ NEON CHASE 3D LOADED');
+        console.log('Controls: SPACE=start, 1/2/3=choose, R=restart');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        alert('Failed to initialize game: ' + error.message);
+    }
 });
+
+// Make functions global so onclick works
+window.startGame = startGame;
+window.chooseEnding = chooseEnding;
+window.restart = restart;
