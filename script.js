@@ -9,6 +9,9 @@ let particles = [];
 let rainDrops = [];
 let neonSigns = [];
 let streetLights = [];
+let flyingCars = [];
+let steamVents = [];
+let sparkEmitters = [];
 let gameState = 'idle'; // idle, intro, chase, stopped_at_crossroads, ending
 let speed = 0;
 let targetSpeed = 0;
@@ -44,15 +47,15 @@ function init() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x000510, 0.012);
 
-    // Camera (POV) - pulled back to see motorcycle
+    // Camera (Behind and above motorcycle - Cyberpunk 2077 style)
     camera = new THREE.PerspectiveCamera(
-        80,
+        75,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
     );
-    camera.position.set(0, 2.5, -1.5); // Pulled back and up
-    camera.rotation.x = -0.05;
+    camera.position.set(0, 3, -4); // Behind and above rider
+    camera.rotation.x = -0.15; // Looking slightly down over handlebars
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -74,6 +77,23 @@ function init() {
     createRoad();
     createRain();
     createParticles();
+
+    // Spawn flying cars
+    for (let i = 0; i < 12; i++) {
+        createFlyingCar();
+    }
+
+    // Create steam vents along the road
+    for (let i = 0; i < 8; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        createSteamVent(side * (6 + Math.random() * 2), -20 - i * 15);
+    }
+
+    // Create overhead spark emitters
+    for (let i = 0; i < 6; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        createSparkEmitter(side * (8 + Math.random() * 4), 8 + Math.random() * 4, -30 - i * 25);
+    }
 
     // Setup raycaster for mouse interaction
     raycaster = new THREE.Raycaster();
@@ -294,12 +314,48 @@ function createMotorcycle() {
     camera.add(headlightRight);
     camera.add(headlightRight.target);
 
+    // NEON UNDERGLOW (key cyberpunk feature)
+    const underglowGeo = new THREE.PlaneGeometry(2, 0.1);
+    const underglowMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+    });
+    const underglow = new THREE.Mesh(underglowGeo, underglowMat);
+    underglow.rotation.x = -Math.PI / 2;
+    underglow.position.set(0, -0.5, 2);
+    camera.add(underglow);
+
+    // Underglow point light
+    const underglowLight = new THREE.PointLight(COLORS.cyan, 3, 8);
+    underglowLight.position.set(0, -0.3, 2);
+    camera.add(underglowLight);
+
+    // WHEEL LIGHT TRAILS
+    const trailGeo = new THREE.PlaneGeometry(0.1, 3);
+    const trailMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.6
+    });
+    const leftTrail = new THREE.Mesh(trailGeo, trailMat);
+    leftTrail.rotation.x = -Math.PI / 2;
+    leftTrail.position.set(-0.4, -0.3, 5);
+    camera.add(leftTrail);
+
+    const rightTrail = leftTrail.clone();
+    rightTrail.position.x = 0.4;
+    camera.add(rightTrail);
+
     motorcycle.leftHandlebar = leftHandlebar;
     motorcycle.rightHandlebar = rightHandlebar;
     motorcycle.leftGrip = leftGrip;
     motorcycle.rightGrip = rightGrip;
     motorcycle.frontWheel = frontWheel;
     motorcycle.tank = tank;
+    motorcycle.underglow = underglow;
+    motorcycle.underglowLight = underglowLight;
 }
 
 // ===== CREATE ENHANCED CYBERPUNK CITY =====
@@ -416,6 +472,41 @@ function createBuilding() {
         building.add(beaconLight);
     }
 
+    // Holographic advertisement (floating above building)
+    if (Math.random() > 0.5) {
+        const adWidth = width * 0.9;
+        const adHeight = 4 + Math.random() * 3;
+        const adGeo = new THREE.PlaneGeometry(adWidth, adHeight);
+
+        const holoColors = [COLORS.cyan, COLORS.magenta, COLORS.pink, COLORS.yellow];
+        const holoColor = holoColors[Math.floor(Math.random() * holoColors.length)];
+
+        const adMat = new THREE.MeshBasicMaterial({
+            color: holoColor,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+        });
+        const ad = new THREE.Mesh(adGeo, adMat);
+        ad.position.y = height/2 + 8 + Math.random() * 5;
+        ad.position.z = depth/2 + 2;
+
+        // Store original opacity for animation
+        ad.userData = {
+            originalOpacity: 0.7,
+            phase: Math.random() * Math.PI * 2,
+            floatSpeed: 0.3 + Math.random() * 0.3
+        };
+
+        building.add(ad);
+
+        // Add holographic glow light
+        const holoLight = new THREE.PointLight(holoColor, 4, 20);
+        holoLight.position.copy(ad.position);
+        holoLight.position.z += 3;
+        building.add(holoLight);
+    }
+
     return building;
 }
 
@@ -498,9 +589,9 @@ function createRoad() {
     }
 }
 
-// ===== CREATE CROSSROADS WITH CLICKABLE PORTALS =====
+// ===== CREATE CROSSROADS WITH DISTINCT PATH ENVIRONMENTS =====
 function createCrossroads() {
-    const crossroadsZ = -50; // Closer so player stops at it
+    const crossroadsZ = -50;
 
     // Intersection platform
     const intersectionGeo = new THREE.PlaneGeometry(80, 50);
@@ -517,139 +608,254 @@ function createCrossroads() {
     // Clear existing portals
     pathPortals = [];
 
-    // LEFT PATH PORTAL (Blue - Alleyways)
-    const leftPortal = createPathPortal(
-        -20,
-        5,
-        crossroadsZ - 20,
-        COLORS.cyan,
-        'left',
-        'ALLEYWAYS'
-    );
-    scene.add(leftPortal);
-    pathPortals.push(leftPortal);
+    // LEFT PATH: BLUE NEON ALLEY
+    const leftPath = createAlleyPath(-20, crossroadsZ);
+    pathPortals.push(leftPath);
 
-    // CENTER PATH PORTAL (Red - Highway)
-    const centerPortal = createPathPortal(
-        0,
-        5,
-        crossroadsZ - 20,
-        COLORS.red,
-        'center',
-        'HIGHWAY'
-    );
-    scene.add(centerPortal);
-    pathPortals.push(centerPortal);
+    // CENTER PATH: RED HIGHWAY RAMP
+    const centerPath = createHighwayPath(0, crossroadsZ);
+    pathPortals.push(centerPath);
 
-    // RIGHT PATH PORTAL (Purple - Tunnel)
-    const rightPortal = createPathPortal(
-        20,
-        5,
-        crossroadsZ - 20,
-        COLORS.purple,
-        'right',
-        'TUNNEL'
-    );
-    scene.add(rightPortal);
-    pathPortals.push(rightPortal);
-
-    // Add road paths behind portals
-    createRoadPath(-20, crossroadsZ - 30, -Math.PI / 6, COLORS.cyan);
-    createRoadPath(0, crossroadsZ - 30, 0, COLORS.red);
-    createRoadPath(20, crossroadsZ - 30, Math.PI / 6, COLORS.purple);
+    // RIGHT PATH: PURPLE TUNNEL
+    const rightPath = createTunnelPath(20, crossroadsZ);
+    pathPortals.push(rightPath);
 }
 
-function createPathPortal(x, y, z, color, pathType, label) {
-    const portalGroup = new THREE.Group();
-    portalGroup.userData = {
-        pathType: pathType,
-        color: color,
-        label: label,
-        isHovered: false,
-        baseEmissive: 0.5,
-        targetEmissive: 0.5
+// LEFT: Blue Neon Alley with graffiti, pipes, puddles
+function createAlleyPath(x, z) {
+    const alleyGroup = new THREE.Group();
+    alleyGroup.userData = {
+        pathType: 'left',
+        color: COLORS.cyan,
+        label: '◀ ALLEY',
+        isHovered: false
     };
 
-    // Portal frame (rectangular gate)
-    const frameGeo = new THREE.TorusGeometry(4, 0.3, 8, 32);
-    const frameMat = new THREE.MeshPhongMaterial({
-        color: 0x222222,
-        emissive: color,
-        emissiveIntensity: 0.5,
-        shininess: 100
+    // Alley walls (narrow)
+    const wallMat = new THREE.MeshPhongMaterial({
+        color: 0x1a1a2a,
+        emissive: COLORS.cyan,
+        emissiveIntensity: 0.1
     });
-    const frame = new THREE.Mesh(frameGeo, frameMat);
-    frame.rotation.y = 0;
-    portalGroup.add(frame);
 
-    // Portal surface (clickable area)
-    const portalGeo = new THREE.CircleGeometry(3.5, 32);
-    const portalMat = new THREE.MeshBasicMaterial({
-        color: color,
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 40), wallMat);
+    leftWall.position.set(x - 6, 4, z - 30);
+    scene.add(leftWall);
+
+    const rightWall = leftWall.clone();
+    rightWall.position.x = x + 6;
+    scene.add(rightWall);
+
+    // Graffiti decals (glowing cyan boxes)
+    for (let i = 0; i < 5; i++) {
+        const graffitiGeo = new THREE.PlaneGeometry(2, 2);
+        const graffitiMat = new THREE.MeshBasicMaterial({
+            color: COLORS.cyan,
+            transparent: true,
+            opacity: 0.7
+        });
+        const graffiti = new THREE.Mesh(graffitiGeo, graffitiMat);
+        graffiti.position.set(x - 5.9, 2 + i * 1.5, z - 15 - i * 5);
+        graffiti.rotation.y = Math.PI / 2;
+        alleyGroup.add(graffiti);
+    }
+
+    // Pipes
+    for (let i = 0; i < 3; i++) {
+        const pipeGeo = new THREE.CylinderGeometry(0.2, 0.2, 40, 8);
+        const pipeMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
+        const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+        pipe.rotation.z = Math.PI / 2;
+        pipe.position.set(x - 5 + i * 2, 6, z - 30);
+        alleyGroup.add(pipe);
+    }
+
+    // Puddle reflections (glowing plane)
+    const puddleGeo = new THREE.CircleGeometry(3, 32);
+    const puddleMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.3
+    });
+    const puddle = new THREE.Mesh(puddleGeo, puddleMat);
+    puddle.rotation.x = -Math.PI / 2;
+    puddle.position.set(x, 0.01, z - 25);
+    alleyGroup.add(puddle);
+
+    // Clickable portal surface
+    const portalGeo = new THREE.BoxGeometry(12, 8, 1);
+    const portalMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.2,
         side: THREE.DoubleSide
     });
     const portal = new THREE.Mesh(portalGeo, portalMat);
-    portalGroup.add(portal);
+    portal.position.set(x, 4, z - 20);
+    alleyGroup.add(portal);
 
-    // Glow ring
-    const glowGeo = new THREE.RingGeometry(3.5, 4.5, 32);
-    const glowMat = new THREE.MeshBasicMaterial({
-        color: color,
+    // Glow light
+    const light = new THREE.PointLight(COLORS.cyan, 3, 30);
+    light.position.set(x, 4, z - 20);
+    alleyGroup.add(light);
+
+    alleyGroup.position.set(0, 0, 0);
+    alleyGroup.userData.portal = portalMat;
+    alleyGroup.userData.light = light;
+
+    scene.add(alleyGroup);
+    return alleyGroup;
+}
+
+// CENTER: Red Highway Ramp with arrows and structure
+function createHighwayPath(x, z) {
+    const highwayGroup = new THREE.Group();
+    highwayGroup.userData = {
+        pathType: 'center',
+        color: COLORS.red,
+        label: '▲ HIGHWAY',
+        isHovered: false
+    };
+
+    // Highway ramp structure
+    const rampGeo = new THREE.BoxGeometry(14, 2, 50);
+    const rampMat = new THREE.MeshPhongMaterial({
+        color: 0x2a1a1a,
+        emissive: COLORS.red,
+        emissiveIntensity: 0.2
+    });
+    const ramp = new THREE.Mesh(rampGeo, rampMat);
+    ramp.position.set(x, 1, z - 35);
+    scene.add(ramp);
+
+    // Support pillars
+    for (let i = 0; i < 4; i++) {
+        const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, 8, 8);
+        const pillarMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(x - 5 + i * 3, -3, z - 20 - i * 8);
+        highwayGroup.add(pillar);
+    }
+
+    // Red hologram arrows
+    for (let i = 0; i < 5; i++) {
+        const arrowGeo = new THREE.ConeGeometry(1, 2, 4);
+        const arrowMat = new THREE.MeshBasicMaterial({ color: COLORS.red });
+        const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+        arrow.rotation.x = -Math.PI / 2;
+        arrow.position.set(x, 2.5, z - 15 - i * 6);
+        highwayGroup.add(arrow);
+    }
+
+    // Clickable portal surface
+    const portalGeo = new THREE.BoxGeometry(14, 8, 1);
+    const portalMat = new THREE.MeshBasicMaterial({
+        color: COLORS.red,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.2,
         side: THREE.DoubleSide
     });
-    const glow = new THREE.Mesh(glowGeo, glowMat);
-    portalGroup.add(glow);
+    const portal = new THREE.Mesh(portalGeo, portalMat);
+    portal.position.set(x, 4, z - 20);
+    highwayGroup.add(portal);
 
-    // Point light
-    const light = new THREE.PointLight(color, 5, 30);
-    light.position.z = 2;
-    portalGroup.add(light);
+    // Glow light
+    const light = new THREE.PointLight(COLORS.red, 3, 30);
+    light.position.set(x, 4, z - 20);
+    highwayGroup.add(light);
 
-    // Particles swirling in portal
-    const particleGroup = new THREE.Group();
-    for (let i = 0; i < 20; i++) {
-        const particleGeo = new THREE.SphereGeometry(0.1, 8, 8);
-        const particleMat = new THREE.MeshBasicMaterial({ color });
-        const particle = new THREE.Mesh(particleGeo, particleMat);
-        const angle = (Math.PI * 2 * i) / 20;
-        const radius = 2 + Math.random();
-        particle.position.x = Math.cos(angle) * radius;
-        particle.position.y = Math.sin(angle) * radius;
-        particle.userData = { angle, radius, speed: 0.02 + Math.random() * 0.03 };
-        particleGroup.add(particle);
-    }
-    portalGroup.add(particleGroup);
+    highwayGroup.position.set(0, 0, 0);
+    highwayGroup.userData.portal = portalMat;
+    highwayGroup.userData.light = light;
 
-    portalGroup.position.set(x, y, z);
-
-    portalGroup.userData.frame = frameMat;
-    portalGroup.userData.portal = portalMat;
-    portalGroup.userData.glow = glowMat;
-    portalGroup.userData.light = light;
-    portalGroup.userData.particles = particleGroup;
-
-    return portalGroup;
+    scene.add(highwayGroup);
+    return highwayGroup;
 }
 
-function createRoadPath(x, z, rotation, color) {
-    const roadGeo = new THREE.PlaneGeometry(12, 60);
-    const roadMat = new THREE.MeshPhongMaterial({
-        color: 0x0a0a15,
-        emissive: color,
-        emissiveIntensity: 0.1,
-        transparent: true,
-        opacity: 0.6
+// RIGHT: Purple Underground Tunnel with metal doors
+function createTunnelPath(x, z) {
+    const tunnelGroup = new THREE.Group();
+    tunnelGroup.userData = {
+        pathType: 'right',
+        color: COLORS.purple,
+        label: '▶ TUNNEL',
+        isHovered: false
+    };
+
+    // Tunnel arch
+    const archGeo = new THREE.CylinderGeometry(7, 7, 40, 8, 1, true, 0, Math.PI);
+    const archMat = new THREE.MeshPhongMaterial({
+        color: 0x2a1a2a,
+        emissive: COLORS.purple,
+        emissiveIntensity: 0.15
     });
-    const road = new THREE.Mesh(roadGeo, roadMat);
-    road.rotation.x = -Math.PI / 2;
-    road.rotation.z = rotation;
-    road.position.set(x * 0.8, 0.01, z - 30);
-    scene.add(road);
+    const arch = new THREE.Mesh(archGeo, archMat);
+    arch.rotation.z = Math.PI / 2;
+    arch.position.set(x, 7, z - 30);
+    scene.add(arch);
+
+    // Tunnel floor
+    const floorGeo = new THREE.PlaneGeometry(14, 40);
+    const floorMat = new THREE.MeshPhongMaterial({
+        color: 0x1a1a1a,
+        emissive: COLORS.purple,
+        emissiveIntensity: 0.1
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(x, 0.02, z - 30);
+    scene.add(floor);
+
+    // Metal door frames
+    const doorFrameGeo = new THREE.BoxGeometry(0.5, 8, 2);
+    const doorFrameMat = new THREE.MeshPhongMaterial({ color: 0x666666 });
+
+    const leftDoorFrame = new THREE.Mesh(doorFrameGeo, doorFrameMat);
+    leftDoorFrame.position.set(x - 7, 4, z - 18);
+    tunnelGroup.add(leftDoorFrame);
+
+    const rightDoorFrame = leftDoorFrame.clone();
+    rightDoorFrame.position.x = x + 7;
+    tunnelGroup.add(rightDoorFrame);
+
+    // Flickering lights inside tunnel
+    for (let i = 0; i < 4; i++) {
+        const lightGeo = new THREE.SphereGeometry(0.3, 8, 8);
+        const lightMat = new THREE.MeshBasicMaterial({ color: COLORS.purple });
+        const lightBulb = new THREE.Mesh(lightGeo, lightMat);
+        lightBulb.position.set(x, 6, z - 20 - i * 8);
+        tunnelGroup.add(lightBulb);
+
+        const bulbLight = new THREE.PointLight(COLORS.purple, 2, 15);
+        bulbLight.position.set(x, 6, z - 20 - i * 8);
+        tunnelGroup.add(bulbLight);
+    }
+
+    // Clickable portal surface
+    const portalGeo = new THREE.BoxGeometry(14, 8, 1);
+    const portalMat = new THREE.MeshBasicMaterial({
+        color: COLORS.purple,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide
+    });
+    const portal = new THREE.Mesh(portalGeo, portalMat);
+    portal.position.set(x, 4, z - 20);
+    tunnelGroup.add(portal);
+
+    // Glow light
+    const light = new THREE.PointLight(COLORS.purple, 3, 30);
+    light.position.set(x, 4, z - 20);
+    tunnelGroup.add(light);
+
+    tunnelGroup.position.set(0, 0, 0);
+    tunnelGroup.userData.portal = portalMat;
+    tunnelGroup.userData.light = light;
+
+    scene.add(tunnelGroup);
+    return tunnelGroup;
 }
+
 
 // ===== CREATE POLICE CARS =====
 function spawnPoliceCar() {
@@ -780,6 +986,140 @@ function spawnDrone() {
     scene.add(droneGroup);
 }
 
+// ===== CREATE FLYING CARS =====
+function createFlyingCar() {
+    const carGroup = new THREE.Group();
+
+    // Car body
+    const bodyGeo = new THREE.BoxGeometry(3, 1, 5);
+    const bodyMat = new THREE.MeshPhongMaterial({
+        color: 0x1a1a2a,
+        emissive: Math.random() > 0.5 ? COLORS.cyan : COLORS.magenta,
+        emissiveIntensity: 0.4,
+        shininess: 100
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    carGroup.add(body);
+
+    // Cockpit
+    const cockpitGeo = new THREE.BoxGeometry(2, 0.8, 2.5);
+    const cockpit = new THREE.Mesh(cockpitGeo, bodyMat);
+    cockpit.position.y = 0.9;
+    carGroup.add(cockpit);
+
+    // Engine glow (bottom)
+    const engineGeo = new THREE.BoxGeometry(2.5, 0.3, 4);
+    const engineMat = new THREE.MeshBasicMaterial({
+        color: COLORS.cyan,
+        transparent: true,
+        opacity: 0.8
+    });
+    const engine = new THREE.Mesh(engineGeo, engineMat);
+    engine.position.y = -0.8;
+    carGroup.add(engine);
+
+    // Engine lights
+    const engineLight = new THREE.PointLight(COLORS.cyan, 2, 10);
+    engineLight.position.y = -0.8;
+    carGroup.add(engineLight);
+
+    // Tail lights
+    const tailLightGeo = new THREE.SphereGeometry(0.2, 8, 8);
+    const tailLightMat = new THREE.MeshBasicMaterial({ color: COLORS.red });
+
+    const tailLight1 = new THREE.Mesh(tailLightGeo, tailLightMat);
+    tailLight1.position.set(-1, 0, -2.5);
+    carGroup.add(tailLight1);
+
+    const tailLight2 = tailLight1.clone();
+    tailLight2.position.x = 1;
+    carGroup.add(tailLight2);
+
+    // Position high above the city
+    carGroup.position.set(
+        (Math.random() - 0.5) * 80,
+        15 + Math.random() * 15,
+        -Math.random() * 250 - 50
+    );
+
+    carGroup.userData = {
+        speed: 0.1 + Math.random() * 0.15,
+        sway: Math.random() * Math.PI * 2
+    };
+
+    flyingCars.push(carGroup);
+    scene.add(carGroup);
+}
+
+// ===== CREATE STEAM VENTS =====
+function createSteamVent(x, z) {
+    const ventGroup = new THREE.Group();
+
+    // Steam particles
+    for (let i = 0; i < 15; i++) {
+        const steamGeo = new THREE.SphereGeometry(0.3 + Math.random() * 0.3, 6, 6);
+        const steamMat = new THREE.MeshBasicMaterial({
+            color: 0xcccccc,
+            transparent: true,
+            opacity: 0.4
+        });
+        const steam = new THREE.Mesh(steamGeo, steamMat);
+
+        steam.userData = {
+            startY: 0.5,
+            speed: 0.05 + Math.random() * 0.05,
+            maxHeight: 4 + Math.random() * 3,
+            offsetX: (Math.random() - 0.5) * 0.5,
+            offsetZ: (Math.random() - 0.5) * 0.5,
+            phase: Math.random() * Math.PI * 2
+        };
+
+        steam.position.set(
+            steam.userData.offsetX,
+            steam.userData.startY,
+            steam.userData.offsetZ
+        );
+
+        ventGroup.add(steam);
+    }
+
+    ventGroup.position.set(x, 0, z);
+    steamVents.push(ventGroup);
+    scene.add(ventGroup);
+}
+
+// ===== CREATE SPARK EMITTERS =====
+function createSparkEmitter(x, y, z) {
+    const sparksGroup = new THREE.Group();
+
+    // Create sparks
+    for (let i = 0; i < 20; i++) {
+        const sparkGeo = new THREE.SphereGeometry(0.05, 4, 4);
+        const sparkMat = new THREE.MeshBasicMaterial({
+            color: Math.random() > 0.5 ? COLORS.yellow : COLORS.orange,
+            transparent: true,
+            opacity: 0.9
+        });
+        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+
+        spark.userData = {
+            velocityX: (Math.random() - 0.5) * 0.1,
+            velocityY: -0.05 - Math.random() * 0.05,
+            velocityZ: (Math.random() - 0.5) * 0.1,
+            life: Math.random() * 2,
+            maxLife: 2,
+            phase: Math.random() * Math.PI * 2
+        };
+
+        spark.position.set(0, 0, 0);
+        sparksGroup.add(spark);
+    }
+
+    sparksGroup.position.set(x, y, z);
+    sparkEmitters.push(sparksGroup);
+    scene.add(sparksGroup);
+}
+
 // ===== CREATE RAIN EFFECT =====
 function createRain() {
     const rainCount = 2000;
@@ -887,6 +1227,38 @@ function updateIntro() {
         motorcycle.spokesGroup.rotation.x += speed * 0.005;
     }
 
+    // Flying cars
+    flyingCars.forEach(car => {
+        car.position.z += moveSpeed * 0.3;
+        car.userData.sway += 0.01;
+        car.position.x += Math.sin(car.userData.sway) * 0.03;
+        if (car.position.z > 50) {
+            car.position.z = -250 - Math.random() * 100;
+        }
+    });
+
+    // Steam vents
+    steamVents.forEach(vent => {
+        vent.position.z += moveSpeed;
+        vent.children.forEach(steam => {
+            steam.position.y += steam.userData.speed;
+            if (steam.position.y > steam.userData.maxHeight) {
+                steam.position.y = steam.userData.startY;
+            }
+        });
+        if (vent.position.z > 20) {
+            vent.position.z = -200;
+        }
+    });
+
+    // Spark emitters
+    sparkEmitters.forEach(emitter => {
+        emitter.position.z += moveSpeed;
+        if (emitter.position.z > 20) {
+            emitter.position.z = -200;
+        }
+    });
+
     // After 4 seconds, spawn police and enter chase
     if (introTimer > 4) {
         gameState = 'chase';
@@ -939,6 +1311,20 @@ function updateChase() {
 
         // Pulse effect
         building.material.emissiveIntensity = 0.2 + Math.sin(Date.now() * 0.001 + building.position.x) * 0.15;
+
+        // Animate holographic ads
+        building.children.forEach(child => {
+            if (child.userData.originalOpacity !== undefined) {
+                // Float animation
+                child.userData.phase += 0.02 * child.userData.floatSpeed;
+                const floatOffset = Math.sin(child.userData.phase) * 0.5;
+                child.position.y = child.position.y - (child.userData.lastFloat || 0) + floatOffset;
+                child.userData.lastFloat = floatOffset;
+
+                // Flicker opacity
+                child.material.opacity = child.userData.originalOpacity + Math.sin(Date.now() * 0.003) * 0.2;
+            }
+        });
     });
 
     // Street lights
@@ -1041,6 +1427,75 @@ function updateChase() {
 
     // Camera shake
     camera.position.y = 2.5 + Math.sin(Date.now() * 0.03) * 0.08 * (speed / 250);
+
+    // Flying cars
+    flyingCars.forEach((car, index) => {
+        car.position.z += moveSpeed * 0.3;
+
+        // Sway motion
+        car.userData.sway += 0.01;
+        car.position.x += Math.sin(car.userData.sway) * 0.03;
+        car.position.y += Math.cos(car.userData.sway * 0.7) * 0.02;
+
+        if (car.position.z > 50) {
+            car.position.z = -250 - Math.random() * 100;
+            car.position.x = (Math.random() - 0.5) * 80;
+            car.position.y = 15 + Math.random() * 15;
+        }
+    });
+
+    // Steam vents
+    steamVents.forEach(vent => {
+        vent.position.z += moveSpeed;
+
+        // Animate steam particles rising
+        vent.children.forEach(steam => {
+            steam.position.y += steam.userData.speed;
+            steam.position.x = steam.userData.offsetX + Math.sin(Date.now() * 0.002 + steam.userData.phase) * 0.3;
+
+            // Reset when too high
+            if (steam.position.y > steam.userData.maxHeight) {
+                steam.position.y = steam.userData.startY;
+                steam.material.opacity = 0.4;
+            } else {
+                // Fade out as it rises
+                steam.material.opacity = 0.4 * (1 - steam.position.y / steam.userData.maxHeight);
+            }
+        });
+
+        // Respawn when too far
+        if (vent.position.z > 20) {
+            vent.position.z = -200 - Math.random() * 100;
+        }
+    });
+
+    // Spark emitters
+    sparkEmitters.forEach(emitter => {
+        emitter.position.z += moveSpeed;
+
+        // Animate sparks falling
+        emitter.children.forEach(spark => {
+            spark.userData.life += 0.016;
+
+            spark.position.x += spark.userData.velocityX;
+            spark.position.y += spark.userData.velocityY;
+            spark.position.z += spark.userData.velocityZ;
+
+            // Fade based on life
+            spark.material.opacity = 0.9 * (1 - spark.userData.life / spark.userData.maxLife);
+
+            // Reset spark
+            if (spark.userData.life > spark.userData.maxLife) {
+                spark.position.set(0, 0, 0);
+                spark.userData.life = 0;
+            }
+        });
+
+        // Respawn when too far
+        if (emitter.position.z > 20) {
+            emitter.position.z = -200 - Math.random() * 100;
+        }
+    });
 }
 
 function updateStoppedAtCrossroads() {
@@ -1050,30 +1505,19 @@ function updateStoppedAtCrossroads() {
 
     // Animate portals
     pathPortals.forEach(portal => {
-        const particles = portal.userData.particles;
-        particles.children.forEach(particle => {
-            particle.userData.angle += particle.userData.speed;
-            particle.position.x = Math.cos(particle.userData.angle) * particle.userData.radius;
-            particle.position.y = Math.sin(particle.userData.angle) * particle.userData.radius;
-        });
-
         // Pulse light
-        portal.userData.light.intensity = 5 + Math.sin(Date.now() * 0.003) * 2;
-
-        // Hover glow effect
-        if (portal.userData.isHovered) {
-            portal.userData.targetEmissive = 1.5;
-            portal.userData.portal.opacity = 0.7;
-            portal.userData.glow.opacity = 0.9;
-        } else {
-            portal.userData.targetEmissive = 0.5;
-            portal.userData.portal.opacity = 0.4;
-            portal.userData.glow.opacity = 0.6;
+        if (portal.userData.light) {
+            portal.userData.light.intensity = 5 + Math.sin(Date.now() * 0.003) * 2;
         }
 
-        // Smooth emissive transition
-        portal.userData.frame.emissiveIntensity +=
-            (portal.userData.targetEmissive - portal.userData.frame.emissiveIntensity) * 0.1;
+        // Hover glow effect
+        if (portal.userData.portal) {
+            if (portal.userData.isHovered) {
+                portal.userData.portal.opacity = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
+            } else {
+                portal.userData.portal.opacity = 0.2;
+            }
+        }
     });
 
     // Wheel still spins slowly
