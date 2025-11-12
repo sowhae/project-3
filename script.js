@@ -9,7 +9,7 @@ let particles = [];
 let rainDrops = [];
 let neonSigns = [];
 let streetLights = [];
-let gameState = 'idle'; // idle, chase, crossroads, ending
+let gameState = 'idle'; // idle, intro, chase, stopped_at_crossroads, ending
 let speed = 0;
 let targetSpeed = 0;
 let steerAngle = 0;
@@ -20,6 +20,9 @@ let events = [];
 let helicopter = null;
 let obstacles = [];
 let eventTimer = 0;
+let introTimer = 0;
+let pathPortals = []; // Clickable path objects
+let raycaster, mouse;
 
 // Colors
 const COLORS = {
@@ -71,6 +74,14 @@ function init() {
     createRoad();
     createRain();
     createParticles();
+
+    // Setup raycaster for mouse interaction
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Mouse events
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('click', onMouseClick);
 
     // Start animation
     animate();
@@ -487,12 +498,12 @@ function createRoad() {
     }
 }
 
-// ===== CREATE CROSSROADS =====
+// ===== CREATE CROSSROADS WITH CLICKABLE PORTALS =====
 function createCrossroads() {
-    const crossroadsZ = -200;
+    const crossroadsZ = -50; // Closer so player stops at it
 
-    // Intersection platform (BIGGER)
-    const intersectionGeo = new THREE.PlaneGeometry(60, 60);
+    // Intersection platform
+    const intersectionGeo = new THREE.PlaneGeometry(80, 50);
     const intersectionMat = new THREE.MeshPhongMaterial({
         color: 0x0a0a15,
         emissive: 0x220044,
@@ -503,97 +514,141 @@ function createCrossroads() {
     intersection.position.set(0, 0, crossroadsZ);
     scene.add(intersection);
 
-    // LEFT ROAD PATH (cyan)
-    const leftRoadGeo = new THREE.PlaneGeometry(14, 80);
-    const leftRoadMat = new THREE.MeshPhongMaterial({
-        color: 0x0a0a15,
-        emissive: COLORS.cyan,
-        emissiveIntensity: 0.2
-    });
-    const leftRoad = new THREE.Mesh(leftRoadGeo, leftRoadMat);
-    leftRoad.rotation.x = -Math.PI / 2;
-    leftRoad.rotation.z = -Math.PI / 6; // 30 degrees left
-    leftRoad.position.set(-25, 0.01, crossroadsZ - 50);
-    scene.add(leftRoad);
+    // Clear existing portals
+    pathPortals = [];
 
-    // RIGHT ROAD PATH (green)
-    const rightRoadMat = new THREE.MeshPhongMaterial({
-        color: 0x0a0a15,
-        emissive: COLORS.green,
-        emissiveIntensity: 0.2
-    });
-    const rightRoad = new THREE.Mesh(new THREE.PlaneGeometry(14, 80), rightRoadMat);
-    rightRoad.rotation.x = -Math.PI / 2;
-    rightRoad.rotation.z = Math.PI / 6; // 30 degrees right
-    rightRoad.position.set(25, 0.01, crossroadsZ - 50);
-    scene.add(rightRoad);
+    // LEFT PATH PORTAL (Blue - Alleyways)
+    const leftPortal = createPathPortal(
+        -20,
+        5,
+        crossroadsZ - 20,
+        COLORS.cyan,
+        'left',
+        'ALLEYWAYS'
+    );
+    scene.add(leftPortal);
+    pathPortals.push(leftPortal);
 
-    // CENTER ROAD (magenta - straight)
-    const centerRoadMat = new THREE.MeshPhongMaterial({
-        color: 0x0a0a15,
-        emissive: COLORS.magenta,
-        emissiveIntensity: 0.2
-    });
-    const centerRoad = new THREE.Mesh(new THREE.PlaneGeometry(14, 80), centerRoadMat);
-    centerRoad.rotation.x = -Math.PI / 2;
-    centerRoad.position.set(0, 0.01, crossroadsZ - 60);
-    scene.add(centerRoad);
+    // CENTER PATH PORTAL (Red - Highway)
+    const centerPortal = createPathPortal(
+        0,
+        5,
+        crossroadsZ - 20,
+        COLORS.red,
+        'center',
+        'HIGHWAY'
+    );
+    scene.add(centerPortal);
+    pathPortals.push(centerPortal);
 
-    // GIANT ARROWS on ground
-    createArrowSign(-20, crossroadsZ + 5, -Math.PI / 4, COLORS.cyan, 3); // Left
-    createArrowSign(0, crossroadsZ + 5, 0, COLORS.magenta, 3); // Straight
-    createArrowSign(20, crossroadsZ + 5, Math.PI / 4, COLORS.green, 3); // Right
+    // RIGHT PATH PORTAL (Purple - Tunnel)
+    const rightPortal = createPathPortal(
+        20,
+        5,
+        crossroadsZ - 20,
+        COLORS.purple,
+        'right',
+        'TUNNEL'
+    );
+    scene.add(rightPortal);
+    pathPortals.push(rightPortal);
 
-    // Barrier walls to block wrong paths
-    const barrierMat = new THREE.MeshPhongMaterial({
-        color: 0xff0000,
-        emissive: COLORS.red,
-        emissiveIntensity: 0.8,
-        transparent: true,
-        opacity: 0.3
-    });
-
-    const leftBarrier = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 20), barrierMat);
-    leftBarrier.position.set(-10, 2, crossroadsZ - 20);
-    leftBarrier.rotation.y = -Math.PI / 6;
-    scene.add(leftBarrier);
-
-    const rightBarrier = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 20), barrierMat);
-    rightBarrier.position.set(10, 2, crossroadsZ - 20);
-    rightBarrier.rotation.y = Math.PI / 6;
-    scene.add(rightBarrier);
-
-    return { intersection, leftRoad, centerRoad, rightRoad };
+    // Add road paths behind portals
+    createRoadPath(-20, crossroadsZ - 30, -Math.PI / 6, COLORS.cyan);
+    createRoadPath(0, crossroadsZ - 30, 0, COLORS.red);
+    createRoadPath(20, crossroadsZ - 30, Math.PI / 6, COLORS.purple);
 }
 
-function createArrowSign(x, z, rotation, color, scale = 1.5) {
-    // Arrow shape using cone (bigger)
-    const arrowGeo = new THREE.ConeGeometry(2 * scale, 4 * scale, 4);
-    const arrowMat = new THREE.MeshBasicMaterial({ color });
-    const arrow = new THREE.Mesh(arrowGeo, arrowMat);
-    arrow.rotation.x = -Math.PI / 2;
-    arrow.rotation.z = rotation;
-    arrow.position.set(x, 1, z);
+function createPathPortal(x, y, z, color, pathType, label) {
+    const portalGroup = new THREE.Group();
+    portalGroup.userData = {
+        pathType: pathType,
+        color: color,
+        label: label,
+        isHovered: false,
+        baseEmissive: 0.5,
+        targetEmissive: 0.5
+    };
 
-    // Pulsing glow light
-    const light = new THREE.PointLight(color, 8, 20);
-    light.position.set(x, 3, z);
-    scene.add(light);
+    // Portal frame (rectangular gate)
+    const frameGeo = new THREE.TorusGeometry(4, 0.3, 8, 32);
+    const frameMat = new THREE.MeshPhongMaterial({
+        color: 0x222222,
+        emissive: color,
+        emissiveIntensity: 0.5,
+        shininess: 100
+    });
+    const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.rotation.y = 0;
+    portalGroup.add(frame);
 
-    // Add outline glow
-    const glowGeo = new THREE.ConeGeometry(2.2 * scale, 4.2 * scale, 4);
-    const glowMat = new THREE.MeshBasicMaterial({
-        color,
+    // Portal surface (clickable area)
+    const portalGeo = new THREE.CircleGeometry(3.5, 32);
+    const portalMat = new THREE.MeshBasicMaterial({
+        color: color,
         transparent: true,
-        opacity: 0.4
+        opacity: 0.4,
+        side: THREE.DoubleSide
+    });
+    const portal = new THREE.Mesh(portalGeo, portalMat);
+    portalGroup.add(portal);
+
+    // Glow ring
+    const glowGeo = new THREE.RingGeometry(3.5, 4.5, 32);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
     });
     const glow = new THREE.Mesh(glowGeo, glowMat);
-    glow.rotation.x = -Math.PI / 2;
-    glow.rotation.z = rotation;
-    glow.position.set(x, 0.8, z);
-    scene.add(glow);
+    portalGroup.add(glow);
 
-    scene.add(arrow);
+    // Point light
+    const light = new THREE.PointLight(color, 5, 30);
+    light.position.z = 2;
+    portalGroup.add(light);
+
+    // Particles swirling in portal
+    const particleGroup = new THREE.Group();
+    for (let i = 0; i < 20; i++) {
+        const particleGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const particleMat = new THREE.MeshBasicMaterial({ color });
+        const particle = new THREE.Mesh(particleGeo, particleMat);
+        const angle = (Math.PI * 2 * i) / 20;
+        const radius = 2 + Math.random();
+        particle.position.x = Math.cos(angle) * radius;
+        particle.position.y = Math.sin(angle) * radius;
+        particle.userData = { angle, radius, speed: 0.02 + Math.random() * 0.03 };
+        particleGroup.add(particle);
+    }
+    portalGroup.add(particleGroup);
+
+    portalGroup.position.set(x, y, z);
+
+    portalGroup.userData.frame = frameMat;
+    portalGroup.userData.portal = portalMat;
+    portalGroup.userData.glow = glowMat;
+    portalGroup.userData.light = light;
+    portalGroup.userData.particles = particleGroup;
+
+    return portalGroup;
+}
+
+function createRoadPath(x, z, rotation, color) {
+    const roadGeo = new THREE.PlaneGeometry(12, 60);
+    const roadMat = new THREE.MeshPhongMaterial({
+        color: 0x0a0a15,
+        emissive: color,
+        emissiveIntensity: 0.1,
+        transparent: true,
+        opacity: 0.6
+    });
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.rotation.z = rotation;
+    road.position.set(x * 0.8, 0.01, z - 30);
+    scene.add(road);
 }
 
 // ===== CREATE POLICE CARS =====
@@ -773,13 +828,78 @@ function createParticles() {
 function animate() {
     requestAnimationFrame(animate);
 
-    if (gameState === 'chase' || gameState === 'crossroads') {
+    if (gameState === 'intro') {
+        updateIntro();
+    } else if (gameState === 'chase') {
         updateChase();
+    } else if (gameState === 'stopped_at_crossroads') {
+        updateStoppedAtCrossroads();
     } else if (gameState === 'ending') {
         updateEnding();
     }
 
     renderer.render(scene, camera);
+}
+
+function updateIntro() {
+    // Auto-play sequence - speed up for 3-5 seconds
+    introTimer += 0.016; // ~60fps
+
+    speed += (200 - speed) * 0.03; // Accelerate to 200
+    document.getElementById('speed').textContent = Math.floor(speed);
+
+    // Move world
+    const moveSpeed = speed * 0.01;
+
+    buildings.forEach(building => {
+        building.position.z += moveSpeed;
+        if (building.position.z > 20) {
+            building.position.z = -300 - Math.random() * 100;
+        }
+        building.material.emissiveIntensity = 0.2 + Math.sin(Date.now() * 0.001 + building.position.x) * 0.15;
+    });
+
+    roadSegments.forEach(segment => {
+        segment.road.position.z += moveSpeed;
+        if (segment.road.position.z > 30) {
+            segment.road.position.z -= 450;
+        }
+    });
+
+    rainDrops.forEach(drop => {
+        drop.position.z += moveSpeed * 2;
+        drop.position.y -= 0.5;
+        if (drop.position.y < 0 || drop.position.z > 20) {
+            drop.position.y = 20 + Math.random() * 30;
+            drop.position.z = -50 - Math.random() * 50;
+        }
+    });
+
+    particles.forEach(particle => {
+        particle.position.z += moveSpeed * 4;
+        if (particle.position.z > 10) {
+            particle.position.z = -100;
+        }
+    });
+
+    // Wheel spin
+    if (motorcycle.spokesGroup) {
+        motorcycle.spokesGroup.rotation.x += speed * 0.005;
+    }
+
+    // After 4 seconds, spawn police and enter chase
+    if (introTimer > 4) {
+        gameState = 'chase';
+        document.getElementById('warning').classList.add('active');
+
+        // Spawn police
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => spawnPoliceCar(), i * 800);
+        }
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => spawnDrone(), i * 1000);
+        }
+    }
 }
 
 function updateChase() {
@@ -799,10 +919,12 @@ function updateChase() {
 
     // Check for crossroads trigger
     crossroadsDistance += moveSpeed;
-    if (crossroadsDistance > 150 && gameState === 'chase') {
-        gameState = 'crossroads';
+    if (crossroadsDistance > 80 && gameState === 'chase') {
+        gameState = 'stopped_at_crossroads';
+        targetSpeed = 0; // Stop the bike
         createCrossroads();
-        document.getElementById('crossroads-ui').classList.add('active');
+        document.getElementById('warning').classList.remove('active');
+        document.getElementById('choose-path-msg').classList.add('active');
     }
 
     // Buildings
@@ -921,8 +1043,47 @@ function updateChase() {
     camera.position.y = 2.5 + Math.sin(Date.now() * 0.03) * 0.08 * (speed / 250);
 }
 
+function updateStoppedAtCrossroads() {
+    // Slow down to a stop
+    speed *= 0.9;
+    document.getElementById('speed').textContent = Math.floor(speed);
+
+    // Animate portals
+    pathPortals.forEach(portal => {
+        const particles = portal.userData.particles;
+        particles.children.forEach(particle => {
+            particle.userData.angle += particle.userData.speed;
+            particle.position.x = Math.cos(particle.userData.angle) * particle.userData.radius;
+            particle.position.y = Math.sin(particle.userData.angle) * particle.userData.radius;
+        });
+
+        // Pulse light
+        portal.userData.light.intensity = 5 + Math.sin(Date.now() * 0.003) * 2;
+
+        // Hover glow effect
+        if (portal.userData.isHovered) {
+            portal.userData.targetEmissive = 1.5;
+            portal.userData.portal.opacity = 0.7;
+            portal.userData.glow.opacity = 0.9;
+        } else {
+            portal.userData.targetEmissive = 0.5;
+            portal.userData.portal.opacity = 0.4;
+            portal.userData.glow.opacity = 0.6;
+        }
+
+        // Smooth emissive transition
+        portal.userData.frame.emissiveIntensity +=
+            (portal.userData.targetEmissive - portal.userData.frame.emissiveIntensity) * 0.1;
+    });
+
+    // Wheel still spins slowly
+    if (motorcycle.spokesGroup) {
+        motorcycle.spokesGroup.rotation.x += speed * 0.005;
+    }
+}
+
 function updateEnding() {
-    speed *= 0.95;
+    speed *= 0.98;
     document.getElementById('speed').textContent = Math.floor(speed);
 
     const moveSpeed = speed * 0.01;
@@ -941,6 +1102,64 @@ function updateEnding() {
     });
 }
 
+// ===== MOUSE INTERACTION =====
+function onMouseMove(event) {
+    if (gameState !== 'stopped_at_crossroads') return;
+
+    // Calculate mouse position in normalized device coordinates
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // Raycast
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(pathPortals, true);
+
+    // Reset all hovers
+    pathPortals.forEach(portal => {
+        portal.userData.isHovered = false;
+    });
+
+    // Set hover on intersected portal
+    if (intersects.length > 0) {
+        let portal = intersects[0].object;
+        while (portal.parent && !portal.userData.pathType) {
+            portal = portal.parent;
+        }
+        if (portal.userData.pathType) {
+            portal.userData.isHovered = true;
+            document.body.style.cursor = 'pointer';
+
+            // Show label
+            const label = portal.userData.label;
+            document.getElementById('path-label').textContent = label;
+            document.getElementById('path-label').classList.add('active');
+        }
+    } else {
+        document.body.style.cursor = 'default';
+        document.getElementById('path-label').classList.remove('active');
+    }
+}
+
+function onMouseClick(event) {
+    if (gameState !== 'stopped_at_crossroads') return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(pathPortals, true);
+
+    if (intersects.length > 0) {
+        let portal = intersects[0].object;
+        while (portal.parent && !portal.userData.pathType) {
+            portal = portal.parent;
+        }
+        if (portal.userData.pathType) {
+            choosePath(portal.userData.pathType);
+        }
+    }
+}
+
 // ===== GAME FUNCTIONS =====
 function startGame() {
     console.log('startGame() called!');
@@ -956,32 +1175,15 @@ function startGame() {
     startScreen.classList.add('hidden');
     hud.classList.add('active');
 
-    gameState = 'chase';
-    targetSpeed = 250;
+    // Start with INTRO state (auto-play)
+    gameState = 'intro';
+    targetSpeed = 200;
     crossroadsDistance = 0;
+    introTimer = 0;
 
-    console.log('Game state:', gameState, 'Target speed:', targetSpeed);
+    console.log('Game state: intro - auto-play sequence started');
 
-    // Spawn police cars
-    setTimeout(() => {
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => spawnPoliceCar(), i * 1000);
-        }
-    }, 1500);
-
-    // Spawn drones
-    setTimeout(() => {
-        for (let i = 0; i < 4; i++) {
-            setTimeout(() => spawnDrone(), i * 800);
-        }
-    }, 2500);
-
-    // Show warning
-    setTimeout(() => {
-        document.getElementById('warning').classList.add('active');
-    }, 2000);
-
-    // Keep spawning more police
+    // Keep spawning police during chase
     setInterval(() => {
         if (gameState === 'chase' && policeCars.length < 5) {
             spawnPoliceCar();
@@ -996,76 +1198,96 @@ function choosePath(path) {
     console.log('Chosen path:', path);
     chosenPath = path;
 
-    document.getElementById('crossroads-ui').classList.remove('active');
+    document.getElementById('choose-path-msg').classList.remove('active');
+    document.getElementById('path-label').classList.remove('active');
 
-    // Steer camera based on choice
+    gameState = 'ending';
+    targetSpeed = 150; // Accelerate into chosen path
+
+    // Hide portals
+    pathPortals.forEach(portal => {
+        portal.visible = false;
+    });
+
+    // Steer camera toward chosen path
     if (path === 'left') {
-        targetSteerAngle = -0.5;
+        targetSteerAngle = -0.4;
     } else if (path === 'right') {
-        targetSteerAngle = 0.5;
+        targetSteerAngle = 0.4;
     } else {
         targetSteerAngle = 0;
     }
 
     setTimeout(() => {
-        chooseEnding(path);
-    }, 2000);
+        playEnding(path);
+    }, 1500);
 }
 
-function chooseEnding(type) {
-    gameState = 'ending';
+function playEnding(path) {
+    document.getElementById('ending-screen').classList.add('active');
 
-    document.getElementById('warning').classList.remove('active');
+    const titleEl = document.getElementById('ending-title');
+    const descEl = document.getElementById('ending-desc');
 
-    setTimeout(() => {
-        document.getElementById('ending-screen').classList.add('active');
+    if (path === 'left') {
+        // ALLEY ESCAPE
+        titleEl.textContent = 'ALLEY ESCAPE';
+        titleEl.style.color = '#0ff';
+        titleEl.style.textShadow = '0 0 30px #0ff, 0 0 60px #f0f';
+        descEl.innerHTML = 'You zip through tight alleys covered in neon graffiti<br>' +
+                           'Police drones crash into walls trying to follow<br>' +
+                           'You escape into a hidden street market';
 
-        const titleEl = document.getElementById('ending-title');
-        const descEl = document.getElementById('ending-desc');
+        // Color shift buildings to graffiti colors
+        buildings.forEach(building => {
+            setInterval(() => {
+                const colors = [COLORS.cyan, COLORS.magenta, COLORS.green, COLORS.pink];
+                building.material.emissive.setHex(colors[Math.floor(Math.random() * colors.length)]);
+            }, 400);
+        });
 
-        if (type === 'left') {
-            titleEl.textContent = 'RETURN CHANGED';
-            titleEl.style.color = '#0ff';
-            titleEl.style.textShadow = '0 0 30px #0ff, 0 0 60px #f0f';
-            descEl.innerHTML = 'You disappeared into the crowd<br>But the city will never look the same<br>Colors are wrong, reality rewritten';
+    } else if (path === 'center') {
+        // HIGHWAY JUMP
+        titleEl.textContent = 'HIGHWAY JUMP';
+        titleEl.style.color = '#f00';
+        titleEl.style.textShadow = '0 0 40px #f00, 0 0 80px #ff0';
+        descEl.innerHTML = 'You speed onto a massive cyber-highway with flying cars<br>' +
+                           'A risky jump over a collapsed road — slow-motion moment<br>' +
+                           'Safe landing. You escaped.';
 
-            buildings.forEach(building => {
-                setInterval(() => {
-                    const colors = [COLORS.cyan, COLORS.magenta, COLORS.green, COLORS.yellow];
-                    building.material.emissive.setHex(colors[Math.floor(Math.random() * colors.length)]);
-                }, 500);
-            });
+        // Accelerate faster
+        targetSpeed = 400;
+        scene.fog.density = 0.04;
 
-        } else if (type === 'center') {
-            titleEl.textContent = 'DRIVE INTO VOID';
-            titleEl.style.color = '#fff';
-            titleEl.style.textShadow = '0 0 40px #0ff, 0 0 80px #f0f';
-            descEl.innerHTML = 'Full throttle into infinite light<br>Speed becomes existence<br>The void welcomes you';
-
-            targetSpeed = 500;
-            scene.fog.density = 0.05;
-
+        // Fade to white flash
+        setTimeout(() => {
+            renderer.setClearColor(0xffffff);
             setTimeout(() => {
-                renderer.setClearColor(0xffffff);
-            }, 2000);
+                renderer.setClearColor(0x000510);
+            }, 500);
+        }, 1000);
 
-        } else if (type === 'right') {
-            titleEl.textContent = 'BECOME THE GLITCH';
-            titleEl.style.color = '#0f0';
-            titleEl.style.textShadow = '0 0 30px #0f0';
-            descEl.innerHTML = 'You merged with the system<br>Consciousness uploaded<br>Body dissolved into neon data';
+    } else if (path === 'right') {
+        // TUNNEL ESCAPE
+        titleEl.textContent = 'TUNNEL ESCAPE';
+        titleEl.style.color = '#a0f';
+        titleEl.style.textShadow = '0 0 30px #a0f';
+        descEl.innerHTML = 'You enter a dark underground maintenance tunnel<br>' +
+                           'Sparks fly, water drips, pipes rattle<br>' +
+                           'You press a button — giant steel doors slam shut behind you';
 
-            buildings.forEach(building => {
-                building.material.wireframe = true;
-                building.material.emissiveIntensity = 1;
-                building.material.emissive.setHex(COLORS.green);
-            });
+        // Make everything dark purple
+        buildings.forEach(building => {
+            building.material.emissive.setHex(COLORS.purple);
+            building.material.emissiveIntensity = 0.2;
+        });
 
-            scene.fog.color.setHex(0x001100);
-            renderer.setClearColor(0x001100);
-        }
-    }, 1000);
+        scene.fog.color.setHex(0x200020);
+        scene.fog.density = 0.03;
+        renderer.setClearColor(0x0a0010);
+    }
 }
+
 
 function restart() {
     gameState = 'idle';
@@ -1075,13 +1297,20 @@ function restart() {
     targetSteerAngle = 0;
     crossroadsDistance = 0;
     chosenPath = null;
+    introTimer = 0;
 
+    // Remove police
     policeCars.forEach(car => scene.remove(car));
     policeCars = [];
 
     drones.forEach(drone => scene.remove(drone));
     drones = [];
 
+    // Remove portals
+    pathPortals.forEach(portal => scene.remove(portal));
+    pathPortals = [];
+
+    // Reset scene
     scene.fog.density = 0.012;
     scene.fog.color.setHex(0x000510);
     renderer.setClearColor(0x000510);
@@ -1089,9 +1318,6 @@ function restart() {
     buildings.forEach(building => {
         building.material.wireframe = false;
         building.material.emissiveIntensity = 0.2 + Math.random() * 0.3;
-    });
-
-    buildings.forEach((building) => {
         const side = Math.random() > 0.5 ? 1 : -1;
         building.position.x = side * (12 + Math.random() * 40);
         building.position.z = -50 - Math.random() * 300;
@@ -1100,10 +1326,14 @@ function restart() {
     camera.position.x = 0;
     camera.rotation.z = 0;
 
+    // Reset UI
     document.getElementById('ending-screen').classList.remove('active');
-    document.getElementById('crossroads-ui').classList.remove('active');
+    document.getElementById('choose-path-msg').classList.remove('active');
+    document.getElementById('path-label').classList.remove('active');
+    document.getElementById('warning').classList.remove('active');
     document.getElementById('hud').classList.remove('active');
     document.getElementById('start-screen').classList.remove('hidden');
+    document.body.style.cursor = 'default';
 }
 
 function onWindowResize() {
@@ -1113,28 +1343,7 @@ function onWindowResize() {
 }
 
 // ===== KEYBOARD CONTROLS =====
-let keysPressed = {};
-
 document.addEventListener('keydown', (e) => {
-    keysPressed[e.key] = true;
-
-    // Steering
-    if (gameState === 'chase' || gameState === 'crossroads') {
-        if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
-            targetSteerAngle = -0.3;
-        }
-        if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-            targetSteerAngle = 0.3;
-        }
-    }
-
-    // Crossroads choice
-    if (gameState === 'crossroads') {
-        if (e.key === '1' || e.key === 'ArrowLeft') choosePath('left');
-        if (e.key === '2' || e.key === 'ArrowUp') choosePath('center');
-        if (e.key === '3' || e.key === 'ArrowRight') choosePath('right');
-    }
-
     if (e.key === ' ' && gameState === 'idle') {
         e.preventDefault();
         startGame();
@@ -1142,16 +1351,6 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'r' && gameState === 'ending') {
         restart();
-    }
-});
-
-document.addEventListener('keyup', (e) => {
-    keysPressed[e.key] = false;
-
-    // Reset steering
-    if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft' ||
-        e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
-        targetSteerAngle = 0;
     }
 });
 
@@ -1168,7 +1367,7 @@ window.addEventListener('load', () => {
 
         init();
         console.log('🏍️ NEON CHASE 3D LOADED');
-        console.log('Controls: SPACE=start, A/D or Arrows=steer, 1/2/3=crossroads choice, R=restart');
+        console.log('Controls: SPACE=start, MOUSE=hover & click portals, R=restart');
     } catch (error) {
         console.error('Initialization error:', error);
         alert('Failed to initialize game: ' + error.message);
@@ -1177,6 +1376,4 @@ window.addEventListener('load', () => {
 
 // Make functions global
 window.startGame = startGame;
-window.chooseEnding = chooseEnding;
-window.choosePath = choosePath;
 window.restart = restart;
